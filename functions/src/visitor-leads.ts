@@ -8,6 +8,21 @@ if(!getApps().length)initializeApp();
 const db=getFirestore();
 export const captureVisitorLead=onRequest({region:"asia-south1",maxInstances:3,concurrency:10,invoker:"public"},async(req,res)=>{
  res.set({"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"});
+ if(req.method==="OPTIONS"){
+  try{
+   const id=req.query.installationId;
+   if(!validInstallationId(id))throw Error("Invalid installation");
+   const result=await resolveInstallation(id);
+   const origin=req.get("origin");
+   if(!allowedBrowserOrigin(origin,result.site.get("url"))||result.site.get("widgetPublished")!==true)throw Error("Invalid origin");
+   res.set("Access-Control-Allow-Origin",origin!);
+   res.set("Vary","Origin");
+   res.set("Access-Control-Allow-Methods","POST");
+   res.set("Access-Control-Allow-Headers","Content-Type");
+   res.status(204).end();
+  }catch{res.status(403).end();}
+  return;
+ }
  if(req.method!=="POST"){res.status(405).json({error:"POST required"});return;}
  if(!req.is("application/json")||Number(req.get("content-length")||0)>2048){res.status(400).json({error:"Invalid request"});return;}
  const p=req.body;
