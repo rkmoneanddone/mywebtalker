@@ -83,7 +83,7 @@ export default function Workspace({user}:{user:User}){
  }
  /** Register a website as pending; verification must be performed by a trusted backend. */
  async function registerSite(){
-  if(!db)return;
+  if(!db||!app)return;
   setSaving(true);setError("");setNotice("");
   try{
    const url=normalizeWebsite(site.trim());
