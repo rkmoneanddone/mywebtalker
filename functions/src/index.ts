@@ -98,3 +98,6 @@ export {askPrivateKnowledge} from "./ai-api.js";
 
 /** Verify website ownership using a customer-controlled DNS TXT record. */
 export {beginWebsiteVerification,confirmWebsiteVerification} from "./website-verification.js";
+
+/** Issue widget installations only after verified website ownership. */
+export {createWidgetInstallation} from "./widget-installation.js";
