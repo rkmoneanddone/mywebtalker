@@ -16,3 +16,9 @@ test("chunking and ranked retrieval",()=>{
  assert.ok(chunkText("a".repeat(2500)).length>1);
  assert.equal(rankPassages("invoice",[{id:"a",text:"invoice total"},{id:"b",text:"other"}])[0]?.id,"a");
 });
+
+test("all supported formats reject files larger than 256 KB",async()=>{
+ for(const extension of ["txt","md","json","docx","xlsx"]){
+  await assert.rejects(extractKnowledge("huge."+extension,Buffer.alloc(256*1024+1,65)),/256 KB maximum/);
+ }
+});
