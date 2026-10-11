@@ -48,8 +48,7 @@ export const ensureCustomer=onCall({region,enforceAppCheck:false},async request=
 /** Return public prices and quotas, cached by clients; prices remain configurable in Firestore. */
 export const listPlans=onCall({region},async()=>{
  const plans=await Promise.all(validPlanIds.map(getPlan));
- const payments=await getPaymentSettings();
- return {plans,branding:await getBrandingConfig(),checkoutEnabled:payments.enabled&&false};
+ return {plans,branding:await getBrandingConfig(),checkoutEnabled:false};
 });
 /** Evaluate server-side trial and subscription state without accepting a client-paid flag. */
 export const getMyEntitlements=onCall({region},async request=>{
