@@ -22,3 +22,9 @@ test("all supported formats reject files larger than 256 KB",async()=>{
   await assert.rejects(extractKnowledge("huge."+extension,Buffer.alloc(256*1024+1,65)),/256 KB maximum/);
  }
 });
+
+test("Office uploads reject non-ZIP data before extraction",async()=>{
+ for(const extension of ["docx","xlsx"]){
+  await assert.rejects(extractKnowledge("fake."+extension,Buffer.from("not a zip")),/Invalid Office ZIP archive/);
+ }
+});
