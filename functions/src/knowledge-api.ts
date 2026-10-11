@@ -66,10 +66,10 @@ export const uploadKnowledge=onCall({region,memory:"1GiB",timeoutSeconds:120,max
   tx.set(uploadLimit,{count:FieldValue.increment(1),bytes:FieldValue.increment(uploadedBytes),updatedAt:FieldValue.serverTimestamp()},{merge:true});
  });
  const docRef=collectionRef.doc();
- // Firestore batches are capped at 500 writes; this upload is capped at 450 chunks.
+ // Only searchable extracted text is persisted. Original files and duplicate chunk copies are discarded.
  const batch=db.batch();
  batch.create(docRef,{filename:extracted.filename,type:extracted.type,characters:extracted.characters,chunkCount:extracted.chunks.length,createdAt:FieldValue.serverTimestamp()});
- extracted.chunks.forEach((text,index)=>{const chunkId=String(index).padStart(5,"0");batch.create(docRef.collection("chunks").doc(chunkId),{text,index});batch.create(db.doc(`customers/${uid}/websites/${websiteId}/knowledgeIndex/${docRef.id}_${chunkId}`),{sourceId:docRef.id,text,terms:searchTerms(text)});});
+ extracted.chunks.forEach((text,index)=>{const chunkId=String(index).padStart(5,"0");batch.create(db.doc(`customers/${uid}/websites/${websiteId}/knowledgeIndex/${docRef.id}_${chunkId}`),{sourceId:docRef.id,text,terms:searchTerms(text)});});
  try{await batch.commit();}catch(error){await uploadLimit.update({count:FieldValue.increment(-1),bytes:FieldValue.increment(-uploadedBytes)}).catch(()=>undefined);throw error;}
  return {id:docRef.id,filename:extracted.filename,characters:extracted.characters,chunks:extracted.chunks.length};
 });
@@ -93,9 +93,11 @@ export const deleteKnowledge=onCall({region},async request=>{
  const snap=await ref.get();
  if(!snap.exists)throw new HttpsError("not-found","Document not found");
  const chunks=await ref.collection("chunks").limit(451).get();
- if(chunks.size>450)throw new HttpsError("failed-precondition","Document requires administrative cleanup");
+ const indexed=await db.collection(`customers/${uid}/websites/${websiteId}/knowledgeIndex`).where("sourceId","==",documentId).limit(451).get();
+ if(chunks.size>450||indexed.size>450)throw new HttpsError("failed-precondition","Document requires administrative cleanup");
  const batch=db.batch();
- chunks.docs.forEach(d=>{batch.delete(d.ref);batch.delete(db.doc(`customers/${uid}/websites/${websiteId}/knowledgeIndex/${documentId}_${d.id}`));});
+ chunks.docs.forEach(d=>batch.delete(d.ref));
+ indexed.docs.forEach(d=>batch.delete(d.ref));
  batch.delete(ref);
  await batch.commit();
  return {ok:true};
