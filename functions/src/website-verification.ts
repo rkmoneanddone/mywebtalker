@@ -1,5 +1,7 @@
 import {randomBytes} from "node:crypto";
-import {resolveTxt} from "node:dns/promises";
+import {resolveTxt,lookup} from "node:dns/promises";
+import {request as httpsRequest} from "node:https";
+import {isIP} from "node:net";
 import {initializeApp,getApps} from "firebase-admin/app";
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
 import {onCall,HttpsError} from "firebase-functions/v2/https";
@@ -25,6 +27,26 @@ export function verificationHost(raw:string):string{
  if(host.length>253||!host.includes(".")||host==="localhost"||host.endsWith(".local")||host.endsWith(".localhost")||!host.split(".").every(label=>/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))||/^[0-9.]+$/.test(host))throw Error("A public DNS hostname is required");
  return host;
 }
+/** Fetch only the exact challenge file from a public IP, pinning DNS resolution to prevent rebinding. */
+async function verifyHtmlFile(host:string,token:string):Promise<boolean>{
+ const addresses=await lookup(host,{all:true,verbatim:true});
+ if(!addresses.length||addresses.some(({address})=>{
+  if(isIP(address)===4){const n=address.split(".").map(Number);return n[0]===0||n[0]===10||n[0]===127||n[0]>=224||n[0]===169&&n[1]===254||n[0]===172&&n[1]>=16&&n[1]<=31||n[0]===192&&n[1]===168||n[0]===100&&n[1]>=64&&n[1]<=127||n[0]===192&&n[1]===0||n[0]===198&&n[1]>=18&&n[1]<=19;}
+  const a=address.toLowerCase();return a==="::1"||a==="::"||a.startsWith("fc")||a.startsWith("fd")||a.startsWith("fe8")||a.startsWith("fe9")||a.startsWith("fea")||a.startsWith("feb")||a.startsWith("::ffff:");
+ }))throw Error("Non-public address");
+ const address=addresses[0]!;
+ return await new Promise<boolean>((resolve,reject)=>{
+  const req=httpsRequest({hostname:host,port:443,path:"/.well-known/mywebtalker-verification.txt",method:"GET",timeout:7000,headers:{accept:"text/plain"},lookup:(_hostname,_options,callback)=>callback(null,address.address,address.family)},res=>{
+   if(res.statusCode!==200){res.resume();resolve(false);return;}
+   let body="";res.setEncoding("utf8");
+   res.on("data",(part:string)=>{body+=part;if(body.length>512)req.destroy(Error("Challenge too large"));});
+   res.on("end",()=>resolve(body.trim()===token));
+   res.on("error",reject);
+  });
+  req.on("timeout",()=>req.destroy(Error("Verification timed out")));
+  req.on("error",reject);req.end();
+ });
+}
 /** Generate a server-owned, unpredictable challenge; never accept a browser-selected proof. */
 export const beginWebsiteVerification=onCall({region},async request=>{
  const uid=uidOf(request),id=websiteIdOf(request.data?.websiteId);
@@ -37,11 +59,12 @@ export const beginWebsiteVerification=onCall({region},async request=>{
  catch{throw new HttpsError("failed-precondition","Website URL is invalid");}
  const token="mwt-"+randomBytes(24).toString("hex");
  await ref.update({verificationToken:token,verificationIssuedAt:FieldValue.serverTimestamp()});
- return {verified:false,hostname:host,recordName:`_mywebtalker.${host}`,recordValue:token};
+ return {verified:false,hostname:host,recordName:`_mywebtalker.${host}`,recordValue:token,htmlPath:"/.well-known/mywebtalker-verification.txt"};
 });
 /** Verify DNS TXT ownership without fetching untrusted customer URLs (avoids SSRF). */
 export const confirmWebsiteVerification=onCall({region,timeoutSeconds:20},async request=>{
  const uid=uidOf(request),id=websiteIdOf(request.data?.websiteId);
+ const method=request.data?.method==="html"?"html":"dns";
  const ref=db.doc(`customers/${uid}/websites/${id}`);
  const snap=await ref.get();
  if(!snap.exists)throw new HttpsError("not-found","Website not registered");
@@ -52,10 +75,16 @@ export const confirmWebsiteVerification=onCall({region,timeoutSeconds:20},async 
  let host:string;
  try{host=verificationHost(String(snap.get("url")||""));}
  catch{throw new HttpsError("failed-precondition","Website URL is invalid");}
- let records:string[][];
- try{records=await resolveTxt(`_mywebtalker.${host}`);}
- catch{throw new HttpsError("failed-precondition","DNS TXT record not found; allow time for propagation");}
- if(!records.some(parts=>parts.join("")===token))throw new HttpsError("permission-denied","DNS TXT value does not match the challenge");
+ if(method==="html"){
+  let matched=false;
+  try{matched=await verifyHtmlFile(host,token);}catch{throw new HttpsError("failed-precondition","Could not read the HTTPS verification file");}
+  if(!matched)throw new HttpsError("permission-denied","HTML verification file does not match the challenge");
+ }else{
+  let records:string[][];
+  try{records=await resolveTxt(`_mywebtalker.${host}`);}
+  catch{throw new HttpsError("failed-precondition","DNS TXT record not found; allow time for propagation");}
+  if(!records.some(parts=>parts.join("")===token))throw new HttpsError("permission-denied","DNS TXT value does not match the challenge");
+ }
  await db.runTransaction(async tx=>{
   const fresh=await tx.get(ref);
   if(fresh.get("verificationToken")!==token||fresh.get("status")==="verified")throw new HttpsError("aborted","Verification changed; reload and retry");
