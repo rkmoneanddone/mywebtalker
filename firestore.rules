@@ -27,14 +27,7 @@ service cloud.firestore {
    allow delete: if false;
    match /websites/{websiteId} {
     allow read: if signedIn(uid);
-    allow create: if signedIn(uid) && trialActive(uid)
-     && request.resource.data.keys().hasOnly(['url','status','createdAt'])
-     && request.resource.data.keys().hasAll(['url','status','createdAt'])
-     && request.resource.data.status == 'pending'
-     && request.resource.data.createdAt == request.time
-     && request.resource.data.url is string
-     && request.resource.data.url.size() <= 255
-     && request.resource.data.url.matches('^https://[a-zA-Z0-9.-]+$');
+    allow create: if false; // Only registerWebsite can create sites and enforce plan limits.
     allow update, delete: if false;
    }
   }
