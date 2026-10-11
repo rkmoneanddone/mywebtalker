@@ -44,7 +44,7 @@ export default function KnowledgePanel({websiteId}:{websiteId:string}){
   if(!functions||!file)return;
   setBusy(true);setError("");setMessage("");
   try{
-   if(file.size>5*1024*1024)throw Error("Maximum upload size is 5 MB");
+   if(file.size>256*1024)throw Error("Maximum upload size is 256 KB");
    if(!/\.(txt|md|json|docx|xlsx)$/i.test(file.name))throw Error("Supported: TXT, MD, JSON, DOCX, XLSX");
    const base64=await readBase64(file);
    const fn=httpsCallable(functions,"uploadKnowledge",{timeout:120000});
@@ -85,10 +85,10 @@ export default function KnowledgePanel({websiteId}:{websiteId:string}){
  }
  return <div className="dash-card" style={{marginTop:20}}>
   <h2>Knowledge library</h2>
-  <p className="subtle">Upload TXT, JSON, Word DOCX, Excel XLSX or Markdown. Maximum 5 MB per file. Uploaded content is private to your account.</p>
+  <p className="subtle">Upload TXT, JSON, Word DOCX, Excel XLSX or Markdown. Maximum 256 KB per file. Excel: one worksheet, up to 500 rows and 30 columns. Uploaded content is private to your account.</p>
   {error&&<p role="alert" className="config-note">{error}</p>}
   {message&&<p role="status" className="notice">{message}</p>}
-  <input type="file" accept=".txt,.md,.json,.docx,.xlsx" onChange={e=>setFile(e.target.files?.[0]||null)}/>
+  <input type="file" accept=".txt,.md,.json,.docx,.xlsx" onChange={e=>{const selected=e.target.files?.[0]||null;setError("");if(selected&&selected.size>256*1024){setFile(null);setError("Maximum upload size is 256 KB");e.target.value="";return;}setFile(selected);}}/>
   <button className="btn" disabled={busy||!file} style={{marginTop:12}} onClick={()=>void upload()}>{busy?"Working…":"Upload and index"}</button>
   {items.map(item=><div key={item.id} style={{display:"flex",gap:12,justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid #eee"}}>
    <span style={{overflowWrap:"anywhere"}}>{item.filename} · {item.chunkCount} passages</span>
