@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {budgetAllowed,COST_PER_REQUEST_MICRO_USD,CUSTOMER_DAILY_MICRO_USD,CUSTOMER_MONTHLY_MICRO_USD,PLATFORM_DAILY_MICRO_USD,PLATFORM_MONTHLY_MICRO_USD} from "../lib/ai-budget.js";
+import {estimatedProviderMicroUsd,budgetAllowed,COST_PER_REQUEST_MICRO_USD,CUSTOMER_DAILY_MICRO_USD,CUSTOMER_MONTHLY_MICRO_USD,PLATFORM_DAILY_MICRO_USD,PLATFORM_MONTHLY_MICRO_USD} from "../lib/ai-budget.js";
 import {allowedBrowserOrigin,validInstallationId,validVisitorQuestion,minuteBucket} from "../lib/widget-security.js";
 
 test("each budget fails closed at the configured micro-USD limit",()=>{
@@ -30,3 +30,5 @@ test("widget identifiers and questions reject invalid input",()=>{
  assert.equal(validVisitorQuestion("ok"),true);
  assert.equal(minuteBucket(Date.UTC(2026,0,1,0,0,1)),minuteBucket(Date.UTC(2026,0,1,0,0,59)));
 });
+
+test("token accounting uses integer micro-USD and rejects invalid usage",()=>{assert.equal(estimatedProviderMicroUsd(1000,500),1200);assert.throws(()=>estimatedProviderMicroUsd(-1,10));});
