@@ -54,7 +54,7 @@
   input.value="";addMessage(question,true);send.disabled=true;input.disabled=true;
   try{
    const url=new URL(endpoint);url.searchParams.set("installationId",installationId);
-   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);
+   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),35000);
    try{
     const response=await fetch(url.toString(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({installationId,question,visitorToken}),signal:controller.signal,credentials:"omit"});
     const data=await response.json();
