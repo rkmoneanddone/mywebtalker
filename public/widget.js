@@ -19,6 +19,28 @@
  const form=document.createElement("form");form.className="form";
  const input=document.createElement("input");input.maxLength=500;input.placeholder="Ask a question";input.setAttribute("aria-label","Your question");input.required=true;
  const send=document.createElement("button");send.type="submit";send.textContent="Send";
+ const leadForm=document.createElement("form");leadForm.className="form";leadForm.style.cssText="display:flex;flex-direction:column;gap:8px";
+ const leadName=document.createElement("input");leadName.placeholder="Your name";leadName.required=true;leadName.minLength=2;leadName.maxLength=100;
+ const leadEmail=document.createElement("input");leadEmail.placeholder="Email address";leadEmail.type="email";leadEmail.required=true;leadEmail.maxLength=254;
+ const leadMobile=document.createElement("input");leadMobile.placeholder="Mobile number with country code";leadMobile.type="tel";leadMobile.required=true;leadMobile.pattern="\\+?[1-9][0-9]{7,14}";
+ const leadButton=document.createElement("button");leadButton.type="submit";leadButton.textContent="Start chatting";
+ const leadError=document.createElement("div");leadError.style.color="#a00";leadError.setAttribute("role","alert");
+ leadForm.append(leadName,leadEmail,leadMobile,leadButton,leadError);
+ let leadSaved=false;
+ leadForm.addEventListener("submit",async event=>{
+  event.preventDefault();if(leadSaved||leadButton.disabled)return;
+  const name=leadName.value.trim(),email=leadEmail.value.trim(),mobile=leadMobile.value.trim();
+  if(name.length<2||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test(email)||!/^\\+?[1-9]\\d{7,14}$/.test(mobile)){leadError.textContent="Enter valid name, email and mobile number.";return;}
+  leadButton.disabled=true;leadError.textContent="";
+  try{
+   const leadUrl=new URL(endpoint);leadUrl.pathname=leadUrl.pathname.replace(/\\/publicWidgetChat$/,"/captureVisitorLead");leadUrl.searchParams.set("installationId",installationId);
+   const response=await fetch(leadUrl.toString(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({installationId,name,email,mobile}),credentials:"omit"});
+   if(!response.ok)throw Error("Unable to save visitor details");
+   leadSaved=true;leadForm.remove();form.style.display="flex";input.focus();
+  }catch{leadError.textContent="Could not start chat. Please retry.";}
+  finally{leadButton.disabled=false;}
+ });
+ form.style.display="none";
  const powered=document.createElement("div");powered.className="powered";powered.textContent="Powered by MyWebTalker";
  const launch=document.createElement("button");launch.className="launch";launch.type="button";launch.textContent="Chat with us";launch.setAttribute("aria-expanded","false");
  function addMessage(value,user){const msg=document.createElement("div");msg.className="msg"+(user?" user":"");msg.textContent=value;messages.append(msg);messages.scrollTop=messages.scrollHeight;}
@@ -38,5 +60,5 @@
   }catch{addMessage("Connection unavailable. Please try again later.",false);}
   finally{send.disabled=false;input.disabled=false;input.focus();}
  });
- form.append(input,send);panel.append(header,messages,form,powered);shadow.append(style,panel,launch);document.body.append(root);
+ form.append(input,send);panel.append(header,messages,leadForm,form,powered);shadow.append(style,panel,launch);document.body.append(root);
 })();
