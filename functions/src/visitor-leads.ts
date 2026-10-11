@@ -1,4 +1,4 @@
-import {createHash} from "node:crypto";
+import {createHash,randomBytes} from "node:crypto";
 import {initializeApp,getApps} from "firebase-admin/app";
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
 import {onRequest} from "firebase-functions/v2/https";
@@ -44,7 +44,14 @@ export const captureVisitorLead=onRequest({region:"asia-south1",maxInstances:3,c
    if(Number(snapshot.get("count")||0)>=3)throw Error("rate");
    tx.set(limit,{count:FieldValue.increment(1),expiresAt:Timestamp.fromMillis(Date.now()+3600000)},{merge:true});
   });
-  await db.collection("customers/"+uid+"/websites/"+websiteId+"/leads").add({name,email,mobile,createdAt:FieldValue.serverTimestamp(),source:"widget"});
-  res.status(200).json({saved:true});
+  const token=randomBytes(32).toString("hex");
+  const tokenHash=createHash("sha256").update(token).digest("hex");
+  const expiresAt=Timestamp.fromMillis(Date.now()+24*3600000);
+  const lead=db.collection("customers/"+uid+"/websites/"+websiteId+"/leads").doc();
+  const batch=db.batch();
+  batch.create(lead,{name,email,mobile,createdAt:FieldValue.serverTimestamp(),source:"widget"});
+  batch.create(db.doc("visitorSessions/"+tokenHash),{uid,websiteId,installationId:p.installationId,leadId:lead.id,expiresAt});
+  await batch.commit();
+  res.status(200).json({saved:true,visitorToken:token});
  }catch(error){res.status(error instanceof Error&&error.message==="rate"?429:403).json({error:"Lead capture unavailable"});}
 });
