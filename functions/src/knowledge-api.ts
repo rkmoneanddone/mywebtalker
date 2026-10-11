@@ -1,3 +1,4 @@
+import {getConfiguredPlan} from "./plan-config.js";
 import {faqRecords} from "./faq-store.js";
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
 import {initializeApp,getApps} from "firebase-admin/app";
@@ -36,7 +37,7 @@ async function requireKnowledgeAccess(uid:string):Promise<void>{
   periodEndMs:subscription?.periodEnd?.toMillis?.(),
   brandingEnabled:subscription?.brandingEnabled===true
  };
- const access=evaluateAccess(billing,DEFAULT_PLANS[planId],Date.now(),0);
+ const access=evaluateAccess(billing,await getConfiguredPlan(planId),Date.now(),0);
  if(!access.allowed)throw new HttpsError("permission-denied","Trial or subscription is not active");
 }
 /** Accept a small document upload, extract all content and atomically publish its indexed passages. */
