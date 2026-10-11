@@ -1,3 +1,4 @@
+import {findDirectFaqAnswer} from "./direct-answer.js";
 import {reserveAiBudget,recordAiUsage} from "./ai-budget.js";
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
 import {initializeApp,getApps} from "firebase-admin/app";
@@ -53,6 +54,8 @@ export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_AP
  if(!website.exists)throw new HttpsError("not-found","Website not registered");
  const passages=await retrieve(uid,websiteId,question);
  if(passages.length===0)return {answer:"I couldn't find that information in the uploaded knowledge.",sources:[]};
+ const direct=findDirectFaqAnswer(question,passages);
+ if(direct)return {answer:direct.answer,sources:[direct.sourceId],answerMode:"direct"};
  const key=OPENAI_API_KEY.value();
  if(!key)throw new HttpsError("failed-precondition","AI provider is not configured");
  const period=await reserveUsage(uid);
