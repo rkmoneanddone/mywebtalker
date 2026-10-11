@@ -4,7 +4,7 @@ import {defineSecret} from "firebase-functions/params";
 import {onCall,HttpsError} from "firebase-functions/v2/https";
 import {DEFAULT_PLANS,evaluateAccess} from "./entitlements.js";
 import type {BillingState,PlanId} from "./entitlements.js";
-import {rankPassages} from "./knowledge.js";
+import {rankPassages,searchTerms} from "./knowledge.js";
 
 if(!getApps().length)initializeApp();
 const db=getFirestore();
@@ -12,13 +12,10 @@ const OPENAI_API_KEY=defineSecret("OPENAI_API_KEY");
 
 /** Collect a bounded, tenant-owned context set for grounded responses. */
 async function retrieve(uid:string,websiteId:string,question:string){
- const docs=await db.collection(`customers/${uid}/websites/${websiteId}/knowledge`).limit(30).get();
- const passages:{id:string;text:string}[]=[];
- for(const doc of docs.docs){
-  const chunks=await doc.ref.collection("chunks").limit(450).get();
-  for(const chunk of chunks.docs)passages.push({id:`${doc.id}/${chunk.id}`,text:String(chunk.get("text")||"")});
- }
- return rankPassages(question,passages,6);
+ const terms=searchTerms(question,10);
+ if(!terms.length)return [];
+ const snap=await db.collection(`customers/${uid}/websites/${websiteId}/knowledgeIndex`).where("terms","array-contains-any",terms).limit(25).get();
+ return rankPassages(question,snap.docs.map(doc=>({id:doc.id,text:String(doc.get("text")||"")})),6);
 }
 /** Atomically reserve one response against the customer's monthly allowance. */
 async function reserveUsage(uid:string):Promise<string>{
