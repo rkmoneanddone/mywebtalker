@@ -116,3 +116,5 @@ export {crawlWebsiteHomepage} from "./crawl-api.js";
 export {registerWebsite} from "./website-registration.js";
 
 export {captureVisitorLead} from "./visitor-leads.js";
+
+export {publicWidgetConfig} from "./public-widget-config.js";
