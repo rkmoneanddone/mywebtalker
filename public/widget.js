@@ -30,10 +30,10 @@
  leadForm.addEventListener("submit",async event=>{
   event.preventDefault();if(leadSaved||leadButton.disabled)return;
   const name=leadName.value.trim(),email=leadEmail.value.trim(),mobile=leadMobile.value.trim();
-  if(name.length<2||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test(email)||!/^\\+?[1-9]\\d{7,14}$/.test(mobile)){leadError.textContent="Enter valid name, email and mobile number.";return;}
+  if(name.length<2||!leadEmail.validity.valid||!leadMobile.validity.valid){leadError.textContent="Enter valid name, email and mobile number.";return;}
   leadButton.disabled=true;leadError.textContent="";
   try{
-   const leadUrl=new URL(endpoint);leadUrl.pathname=leadUrl.pathname.replace(/\\/publicWidgetChat$/,"/captureVisitorLead");leadUrl.searchParams.set("installationId",installationId);
+   const leadUrl=new URL(endpoint);leadUrl.pathname=leadUrl.pathname.slice(0,leadUrl.pathname.lastIndexOf("/")+1)+"captureVisitorLead";leadUrl.searchParams.set("installationId",installationId);
    const response=await fetch(leadUrl.toString(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({installationId,name,email,mobile}),credentials:"omit"});
    if(!response.ok)throw Error("Unable to save visitor details");
    leadSaved=true;leadForm.remove();form.style.display="flex";input.focus();
