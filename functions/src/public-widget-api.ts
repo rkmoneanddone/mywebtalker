@@ -43,7 +43,7 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
  const {installationId,question}=payload;
  if(!validInstallationId(installationId)||!validVisitorQuestion(question)){res.status(400).json({error:"Invalid request"});return;}
  try{
-  const {uid,site}=await resolveInstallation(installationId);
+  const {uid,site,websiteId}=await resolveInstallation(installationId);
   // CORS is a browser restriction, not a substitute for rate limiting or tenant isolation.
   const origin=req.get("origin");
   if(!allowedBrowserOrigin(origin,site.get("url"))){res.status(403).json({error:"Unapproved website origin"});return;}
@@ -64,7 +64,15 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
   const bucket=minuteBucket(Date.now());
   const limitRef=db.doc(`widgetRateLimits/${installationId}/windows/${bucket}_${ipHash}`);
   const siteLimitRef=db.doc(`widgetRateLimits/${installationId}/windows/${bucket}_site`);
-  const {websiteId}=await resolveInstallation(installationId);
+  await db.runTransaction(async tx=>{
+   const [usage,rate,siteRate]=await Promise.all([tx.get(usageRef),tx.get(limitRef),tx.get(siteLimitRef)]);
+   const decision=evaluateAccess(billing,DEFAULT_PLANS[planId],Date.now(),Number(usage.get("responses")||0));
+   if(!decision.allowed)throw Error("quota");
+   if(Number(rate.get("count")||0)>=5||Number(siteRate.get("count")||0)>=60)throw Error("rate");
+   tx.set(limitRef,{count:FieldValue.increment(1),expiresAt:Timestamp.fromMillis(Date.now()+3600000)},{merge:true});
+   tx.set(siteLimitRef,{count:FieldValue.increment(1),expiresAt:Timestamp.fromMillis(Date.now()+3600000)},{merge:true});
+   tx.set(usageRef,{responses:FieldValue.increment(1),period,updatedAt:FieldValue.serverTimestamp()},{merge:true});
+  });
   const documents=await db.collection(`customers/${uid}/websites/${websiteId}/knowledge`).limit(30).get();
   const passages:{id:string;text:string}[]=[];
   for(const document of documents.docs){
@@ -75,15 +83,6 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
   if(!ranked.length){res.status(200).json({answer:"I could not find that information in the website knowledge.",ready:true});return;}
   const key=OPENAI_API_KEY.value();
   if(!key){res.status(503).json({error:"Assistant is not configured"});return;}
-  await db.runTransaction(async tx=>{
-   const [usage,rate,siteRate]=await Promise.all([tx.get(usageRef),tx.get(limitRef),tx.get(siteLimitRef)]);
-   const decision=evaluateAccess(billing,DEFAULT_PLANS[planId],Date.now(),Number(usage.get("responses")||0));
-   if(!decision.allowed)throw Error("quota");
-   if(Number(rate.get("count")||0)>=5||Number(siteRate.get("count")||0)>=60)throw Error("rate");
-   tx.set(limitRef,{count:FieldValue.increment(1),expiresAt:Timestamp.fromMillis(Date.now()+3600000)},{merge:true});
-   tx.set(siteLimitRef,{count:FieldValue.increment(1),expiresAt:Timestamp.fromMillis(Date.now()+3600000)},{merge:true});
-   tx.set(usageRef,{responses:FieldValue.increment(1),period,updatedAt:FieldValue.serverTimestamp()},{merge:true});
-  });
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),25000);
   try{
