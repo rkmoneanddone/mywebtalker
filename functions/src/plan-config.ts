@@ -1,6 +1,8 @@
 import {getFirestore} from "firebase-admin/firestore";
+import {initializeApp,getApps} from "firebase-admin/app";
 import {DEFAULT_PLANS} from "./entitlements.js";
 import type {Plan,PlanId} from "./entitlements.js";
+if(!getApps().length)initializeApp();
 const db=getFirestore();
 export const planIds:PlanId[]=["self","managed","pro"];
 export function parsePlan(value:unknown,id:PlanId):Plan{
