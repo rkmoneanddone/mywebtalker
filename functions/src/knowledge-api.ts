@@ -1,3 +1,4 @@
+import {faqRecords} from "./faq-store.js";
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
 import {initializeApp,getApps} from "firebase-admin/app";
 import {onCall,HttpsError} from "firebase-functions/v2/https";
@@ -65,10 +66,12 @@ export const uploadKnowledge=onCall({region,memory:"1GiB",timeoutSeconds:120,max
    throw new HttpsError("resource-exhausted","Daily upload allowance reached");
   tx.set(uploadLimit,{count:FieldValue.increment(1),bytes:FieldValue.increment(uploadedBytes),updatedAt:FieldValue.serverTimestamp()},{merge:true});
  });
+ const faq=faqRecords(extracted.text);
  const docRef=collectionRef.doc();
  // Only searchable extracted text is persisted. Original files and duplicate chunk copies are discarded.
  const batch=db.batch();
  batch.create(docRef,{filename:extracted.filename,type:extracted.type,characters:extracted.characters,chunkCount:extracted.chunks.length,createdAt:FieldValue.serverTimestamp()});
+ faq.forEach((entry,index)=>batch.create(db.doc(`customers/${uid}/websites/${websiteId}/faqIndex/${docRef.id}_${String(index).padStart(3,"0")}`),{sourceId:docRef.id,...entry}));
  extracted.chunks.forEach((text,index)=>{const chunkId=String(index).padStart(5,"0");batch.create(db.doc(`customers/${uid}/websites/${websiteId}/knowledgeIndex/${docRef.id}_${chunkId}`),{sourceId:docRef.id,text,terms:searchTerms(text)});});
  try{await batch.commit();}catch(error){await uploadLimit.update({count:FieldValue.increment(-1),bytes:FieldValue.increment(-uploadedBytes)}).catch(()=>undefined);throw error;}
  return {id:docRef.id,filename:extracted.filename,characters:extracted.characters,chunks:extracted.chunks.length};
@@ -94,9 +97,10 @@ export const deleteKnowledge=onCall({region},async request=>{
  if(!snap.exists)throw new HttpsError("not-found","Document not found");
  const chunks=await ref.collection("chunks").limit(451).get();
  const indexed=await db.collection(`customers/${uid}/websites/${websiteId}/knowledgeIndex`).where("sourceId","==",documentId).limit(451).get();
- if(chunks.size>450||indexed.size>450)throw new HttpsError("failed-precondition","Document requires administrative cleanup");
+ const faq=await db.collection(`customers/${uid}/websites/${websiteId}/faqIndex`).where("sourceId","==",documentId).limit(101).get();
+ if(chunks.size>450||indexed.size>450||faq.size>100)throw new HttpsError("failed-precondition","Document requires administrative cleanup");
  // Delete in bounded batches; legacy documents can have both old and new copies.
- const refs=[...chunks.docs.map(d=>d.ref),...indexed.docs.map(d=>d.ref)];
+ const refs=[...chunks.docs.map(d=>d.ref),...indexed.docs.map(d=>d.ref),...faq.docs.map(d=>d.ref)];
  for(let start=0;start<refs.length;start+=400){
   const batch=db.batch();
   refs.slice(start,start+400).forEach(item=>batch.delete(item));
