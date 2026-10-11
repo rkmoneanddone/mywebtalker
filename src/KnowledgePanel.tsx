@@ -63,6 +63,18 @@ export default function KnowledgePanel({websiteId}:{websiteId:string}){
   }catch(e){setError(e instanceof Error?e.message:"Delete failed");}
   finally{setBusy(false);}
  }
+ /** Rebuild the search index for documents uploaded before indexing was enabled. */
+ async function rebuildIndex(){
+  if(!functions||!items.length)return;
+  setBusy(true);setError("");setMessage("");
+  try{
+   const fn=httpsCallable<{websiteId:string;documentId:string},{indexed:number}>(functions,"reindexKnowledge");
+   let total=0;
+   for(const item of items){const result=await fn({websiteId,documentId:item.id});total+=result.data.indexed;}
+   setMessage(`Search index ready: ${total} passages across ${items.length} documents.`);
+  }catch(e){setError(e instanceof Error?e.message:"Could not rebuild search index");}
+  finally{setBusy(false);}
+ }
  /** Preview relevant source passages before enabling the AI provider adapter. */
  async function search(){
   if(!functions||question.trim().length<2)return;
@@ -92,6 +104,7 @@ export default function KnowledgePanel({websiteId}:{websiteId:string}){
    <div className="knowledge-actions"><button className="btn" disabled={busy||!file} onClick={()=>void upload()}>{busy?"Working…":"Upload and index"}</button>{file&&<button className="btn secondary" disabled={busy} onClick={()=>setFile(null)}>Clear selection</button>}</div>
   </section>
   <section className="knowledge-section"><div className="knowledge-section-heading"><span className="step-number">2</span><div><h3>Uploaded documents</h3><p className="subtle">Manage the information available to this website's chatbot.</p></div></div>
+   {items.length>0&&<div className="knowledge-actions"><button className="btn secondary small" disabled={busy} onClick={()=>void rebuildIndex()}>Rebuild search index (existing documents)</button></div>}
    {items.length===0?<div className="knowledge-empty">No documents uploaded yet. Add your first file above.</div>:<div className="knowledge-documents">{items.map(item=><div key={item.id} className="knowledge-document"><div><strong>{item.filename}</strong><small>{item.chunkCount} indexed passages</small></div><button className="btn secondary small" disabled={busy} onClick={()=>void remove(item.id)}>Delete</button></div>)}</div>}
   </section>
   <section className="knowledge-section"><div className="knowledge-section-heading"><span className="step-number">3</span><div><h3>Test your knowledge</h3><p className="subtle">Search passages without using AI quota, or ask AI for a generated answer.</p></div></div>
