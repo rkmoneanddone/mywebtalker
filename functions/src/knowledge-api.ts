@@ -114,3 +114,24 @@ export const searchKnowledge=onCall({region},async request=>{
  const matches=await db.collection(`customers/${uid}/websites/${websiteId}/knowledgeIndex`).where("terms","array-contains-any",terms).limit(25).get();
  return {passages:rankPassages(question,matches.docs.map(d=>({id:d.id,text:String(d.get("text")||"")})))};
 });
+
+/** One-time migration of legacy extracted passages. Original files are not needed or retained. */
+export const reindexKnowledge=onCall({region,maxInstances:2},async request=>{
+ const uid=customerId(request);
+ await requireKnowledgeAccess(uid);
+ const websiteId=safeId(request.data?.websiteId);
+ const documentId=safeId(request.data?.documentId);
+ const website=await db.doc(`customers/${uid}/websites/${websiteId}`).get();
+ if(!website.exists)throw new HttpsError("not-found","Website not registered");
+ const docRef=db.doc(`customers/${uid}/websites/${websiteId}/knowledge/${documentId}`);
+ if(!(await docRef.get()).exists)throw new HttpsError("not-found","Document not found");
+ const chunks=await docRef.collection("chunks").limit(101).get();
+ if(chunks.size>100)throw new HttpsError("resource-exhausted","Document requires administrative reindexing");
+ const batch=db.batch();
+ for(const chunk of chunks.docs){
+  const text=String(chunk.get("text")||"");
+  batch.set(db.doc(`customers/${uid}/websites/${websiteId}/knowledgeIndex/${documentId}_${chunk.id}`),{sourceId:documentId,text,terms:searchTerms(text)});
+ }
+ await batch.commit();
+ return {indexed:chunks.size};
+});
