@@ -1,3 +1,4 @@
+import KnowledgePanel from "./KnowledgePanel";
 import {useEffect,useState} from "react";
 import {addDoc,collection,doc,getDoc,getDocs,serverTimestamp,setDoc,updateDoc} from "firebase/firestore";
 import type {Timestamp} from "firebase/firestore";
@@ -36,6 +37,7 @@ export default function Workspace({user}:{user:User}){
  const [createdAt,setCreatedAt]=useState<Timestamp>();
  const [websites,setWebsites]=useState<Website[]>([]);
  const [site,setSite]=useState("");
+ const [selectedWebsite,setSelectedWebsite]=useState("");
  const [loading,setLoading]=useState(true);
  const [saving,setSaving]=useState(false);
  const [error,setError]=useState("");
@@ -110,6 +112,8 @@ export default function Workspace({user}:{user:User}){
     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><input aria-label="Website URL" style={{flex:"1 1 240px",padding:12,border:"1px solid #dcdfe9",borderRadius:8}} placeholder="https://example.com" value={site} onChange={e=>setSite(e.target.value)}/><button className="btn" disabled={saving||!site.trim()} onClick={()=>void registerSite()}>Add website</button></div>
     {websites.map(w=><p key={w.id} style={{overflowWrap:"anywhere"}}>{w.url} — <strong>{w.status==="pending"?"Pending verification":w.status}</strong></p>)}
    </div>
+   {websites.length>0&&<div className="dash-card" style={{marginTop:20}}><h2>Choose knowledge website</h2><select value={selectedWebsite||websites[0]?.id||""} onChange={e=>setSelectedWebsite(e.target.value)}>{websites.map(w=><option key={w.id} value={w.id}>{w.url}</option>)}</select></div>}
+   {websites.length>0&&<KnowledgePanel key={selectedWebsite||websites[0].id} websiteId={selectedWebsite||websites[0].id}/>}
   </>}
  </div>;
 }
