@@ -92,3 +92,6 @@ export const paymentWebhook=onRequest({region},(_request,response)=>{
 
 /** Expose modular authenticated knowledge management endpoints. */
 export {uploadKnowledge,listKnowledge,deleteKnowledge,searchKnowledge} from "./knowledge-api.js";
+
+/** Expose authenticated, grounded AI preview with backend quota enforcement. */
+export {askPrivateKnowledge} from "./ai-api.js";
