@@ -110,3 +110,5 @@ export {publicWidgetChat} from "./public-widget-api.js";
 export {crawlWebsiteHomepage} from "./crawl-api.js";
 
 export {registerWebsite} from "./website-registration.js";
+
+export {captureVisitorLead} from "./visitor-leads.js";
