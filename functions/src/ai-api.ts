@@ -1,3 +1,4 @@
+import {getConfiguredPlan} from "./plan-config.js";
 import {extractPassageAnswer} from "./passage-answer.js";
 import {lookupFaq} from "./faq-store.js";
 import {findDirectFaqAnswer} from "./direct-answer.js";
@@ -39,7 +40,7 @@ async function reserveUsage(uid:string):Promise<string>{
    periodEndMs:subscription?.periodEnd?.toMillis?.(),brandingEnabled:false
   };
   const used=Number(usage.get("responses")||0);
-  const decision=evaluateAccess(state,DEFAULT_PLANS[planId],Date.now(),used);
+  const decision=evaluateAccess(state,await getConfiguredPlan(planId),Date.now(),used);
   if(!decision.allowed)throw new HttpsError("resource-exhausted","Subscription inactive or response quota exhausted");
   tx.set(usageRef,{responses:FieldValue.increment(1),period,updatedAt:FieldValue.serverTimestamp()},{merge:true});
  });
