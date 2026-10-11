@@ -57,8 +57,11 @@ export const beginWebsiteVerification=onCall({region},async request=>{
  let host:string;
  try{host=verificationHost(String(snap.get("url")||""));}
  catch{throw new HttpsError("failed-precondition","Website URL is invalid");}
- const token="mwt-"+randomBytes(24).toString("hex");
- await ref.update({verificationToken:token,verificationIssuedAt:FieldValue.serverTimestamp()});
+ const existing=snap.get("verificationToken");
+ const issued=snap.get("verificationIssuedAt") as Timestamp|undefined;
+ const valid=typeof existing==="string"&&issued&&Date.now()-issued.toMillis()<86400000;
+ const token=valid?existing:"mwt-"+randomBytes(24).toString("hex");
+ if(!valid)await ref.update({verificationToken:token,verificationIssuedAt:FieldValue.serverTimestamp()});
  return {verified:false,hostname:host,recordName:`_mywebtalker.${host}`,recordValue:token,htmlPath:"/.well-known/mywebtalker-verification.txt"};
 });
 /** Verify DNS TXT ownership without fetching untrusted customer URLs (avoids SSRF). */
