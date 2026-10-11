@@ -10,7 +10,7 @@ import type {BillingState,PlanId} from "./entitlements.js";
 if(!getApps().length)initializeApp();
 const db=getFirestore();
 const region="asia-south1";
-const MAX_DOCUMENTS=30;
+
 const MAX_UPLOADS_PER_DAY=10;
 const MAX_DAILY_BYTES=1024*1024;
 
@@ -25,7 +25,7 @@ function safeId(value:unknown):string{
  return value;
 }
 /** Check trial/paid access using server-owned timestamps and subscription records. */
-async function requireKnowledgeAccess(uid:string):Promise<void>{
+async function requireKnowledgeAccess(uid:string):Promise<number>{
  const account=await db.doc(`customers/${uid}`).get();
  const created=account.get("createdAt") as Timestamp|undefined;
  if(!created)throw new HttpsError("failed-precondition","Customer profile is missing");
@@ -37,13 +37,15 @@ async function requireKnowledgeAccess(uid:string):Promise<void>{
   periodEndMs:subscription?.periodEnd?.toMillis?.(),
   brandingEnabled:subscription?.brandingEnabled===true
  };
- const access=evaluateAccess(billing,await getConfiguredPlan(planId),Date.now(),0);
+ const plan=await getConfiguredPlan(planId);
+ const access=evaluateAccess(billing,plan,Date.now(),0);
  if(!access.allowed)throw new HttpsError("permission-denied","Trial or subscription is not active");
+ return plan.knowledgePages;
 }
 /** Accept a small document upload, extract all content and atomically publish its indexed passages. */
 export const uploadKnowledge=onCall({region,memory:"1GiB",timeoutSeconds:120,maxInstances:5},async request=>{
  const uid=customerId(request);
- await requireKnowledgeAccess(uid);
+ const maxDocuments=await requireKnowledgeAccess(uid);
  const websiteId=safeId(request.data?.websiteId);
  const filename=request.data?.filename;
  const base64=request.data?.base64;
@@ -51,8 +53,8 @@ export const uploadKnowledge=onCall({region,memory:"1GiB",timeoutSeconds:120,max
  const website=await db.doc(`customers/${uid}/websites/${websiteId}`).get();
  if(!website.exists)throw new HttpsError("not-found","Website not registered");
  const collectionRef=db.collection(`customers/${uid}/websites/${websiteId}/knowledge`);
- const existing=await collectionRef.limit(MAX_DOCUMENTS).get();
- if(existing.size>=MAX_DOCUMENTS)throw new HttpsError("resource-exhausted","Document limit reached");
+ const existing=await collectionRef.limit(maxDocuments).get();
+ if(existing.size>=maxDocuments)throw new HttpsError("resource-exhausted","Document limit reached");
  let extracted;
  try{extracted=await extractKnowledge(filename,Buffer.from(base64,"base64"));}
  catch(error){throw new HttpsError("invalid-argument",error instanceof Error?error.message:"Invalid document");}
