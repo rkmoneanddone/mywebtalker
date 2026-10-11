@@ -28,10 +28,10 @@ export async function recordAiUsage(uid:string,usage:unknown):Promise<void>{
  if(!usage||typeof usage!=="object")return;
  const u=usage as {prompt_tokens?:number;completion_tokens?:number};
  const input=u.prompt_tokens,output=u.completion_tokens;
- if(!Number.isSafeInteger(input)||!Number.isSafeInteger(output)||input!<0||output!<0)return;
+ if(!Number.isSafeInteger(input)||!Number.isSafeInteger(output)||(input as number)<0||(output as number)<0)return;
  const month=new Date().toISOString().slice(0,7);
  await db.doc(`aiBudgets/${uid}/months/${month}`).set({
-  inputTokens:FieldValue.increment(input!),outputTokens:FieldValue.increment(output!),
+  inputTokens:FieldValue.increment(input as number),outputTokens:FieldValue.increment(output as number),
   successfulRequests:FieldValue.increment(1)
  },{merge:true});
 }
