@@ -1,27 +1,42 @@
-/* MyWebTalker embeddable widget shell. No API key or private customer data is exposed. */
+/* MyWebTalker public widget. Installation IDs are public; backend enforces all access. */
 (()=>{
  "use strict";
  const script=document.currentScript;
- if(!script)return;
- const siteId=script.getAttribute("data-site-id");
- const endpoint=new URL(script.src);
- if(!siteId||!/^[A-Za-z0-9_-]{1,100}$/.test(siteId)||document.getElementById("mywebtalker-widget-root"))return;
- const host=document.createElement("div");
- host.id="mywebtalker-widget-root";
- host.style.cssText="position:fixed;bottom:20px;right:20px;z-index:2147483647;font-family:system-ui,sans-serif";
- const shadow=host.attachShadow({mode:"closed"});
+ if(!script||document.getElementById("mywebtalker-widget-root"))return;
+ const installationId=script.getAttribute("data-installation-id");
+ const api=script.getAttribute("data-api-url");
+ if(!/^w_[a-f0-9]{40}$/.test(installationId||"")||!api)return;
+ let endpoint;
+ try{endpoint=new URL(api);if(endpoint.protocol!=="https:")return;}catch{return;}
+ const root=document.createElement("div");root.id="mywebtalker-widget-root";
+ root.style.cssText="position:fixed;bottom:20px;right:20px;z-index:2147483647;font:14px system-ui,sans-serif";
+ const shadow=root.attachShadow({mode:"closed"});
  const style=document.createElement("style");
- style.textContent="button{cursor:pointer;font:inherit} .launch{background:#6d5efc;color:white;border:0;border-radius:100px;padding:15px 20px;box-shadow:0 5px 22px #0003}.panel{display:none;width:min(340px,calc(100vw - 40px));height:400px;background:white;border-radius:14px;box-shadow:0 8px 35px #0003;overflow:hidden;margin-bottom:12px;border:1px solid #ddd}.panel.open{display:flex;flex-direction:column}.head{padding:16px;background:#6d5efc;color:white;font-weight:700}.body{padding:18px;flex:1;color:#333;font-size:14px}.foot{padding:12px;border-top:1px solid #eee;color:#666;font-size:12px}";
- const panel=document.createElement("section");
- panel.className="panel";
- panel.setAttribute("role","dialog");
- panel.setAttribute("aria-label","Website assistant");
+ style.textContent=".panel{display:none;flex-direction:column;width:min(350px,calc(100vw - 40px));height:420px;margin-bottom:12px;border:1px solid #ddd;border-radius:14px;overflow:hidden;background:white;box-shadow:0 8px 30px #0003}.panel.open{display:flex}.head{padding:15px;background:#6d5efc;color:white;font-weight:700}.messages{flex:1;overflow-y:auto;padding:14px;white-space:pre-wrap;overflow-wrap:anywhere}.msg{margin-bottom:12px;padding:9px;border-radius:8px;background:#f3f3fa}.msg.user{background:#e9e5ff}.form{display:flex;gap:5px;padding:10px;border-top:1px solid #ddd}.form input{min-width:0;flex:1;padding:9px}.form button,.launch{border:0;border-radius:9px;background:#6d5efc;color:white;padding:11px;cursor:pointer}.form button:disabled{opacity:.5}.launch{border-radius:40px}.powered{padding:5px;text-align:center;color:#666;font-size:11px}";
+ const panel=document.createElement("section");panel.className="panel";panel.setAttribute("role","dialog");panel.setAttribute("aria-label","Website assistant");
  const header=document.createElement("div");header.className="head";header.textContent="Website assistant";
- const body=document.createElement("div");body.className="body";body.textContent="The chatbot is being configured. Please contact this website directly for assistance.";
- const footer=document.createElement("div");footer.className="foot";footer.textContent="Powered by MyWebTalker";
+ const messages=document.createElement("div");messages.className="messages";messages.setAttribute("role","log");messages.setAttribute("aria-live","polite");
+ const form=document.createElement("form");form.className="form";
+ const input=document.createElement("input");input.maxLength=500;input.placeholder="Ask a question";input.setAttribute("aria-label","Your question");input.required=true;
+ const send=document.createElement("button");send.type="submit";send.textContent="Send";
+ const powered=document.createElement("div");powered.className="powered";powered.textContent="Powered by MyWebTalker";
  const launch=document.createElement("button");launch.className="launch";launch.type="button";launch.textContent="Chat with us";launch.setAttribute("aria-expanded","false");
- launch.addEventListener("click",()=>{const open=panel.classList.toggle("open");launch.setAttribute("aria-expanded",String(open));launch.textContent=open?"Close chat":"Chat with us";});
- panel.append(header,body,footer);shadow.append(style,panel,launch);document.body.append(host);
- // Endpoint origin is intentionally not used for requests until the public API is secured.
- void endpoint;
+ function addMessage(value,user){const msg=document.createElement("div");msg.className="msg"+(user?" user":"");msg.textContent=value;messages.append(msg);messages.scrollTop=messages.scrollHeight;}
+ addMessage("Hello! How can I help you?",false);
+ launch.addEventListener("click",()=>{const open=panel.classList.toggle("open");launch.setAttribute("aria-expanded",String(open));launch.textContent=open?"Close chat":"Chat with us";if(open)input.focus();});
+ form.addEventListener("submit",async event=>{
+  event.preventDefault();const question=input.value.trim();if(question.length<2||send.disabled)return;
+  input.value="";addMessage(question,true);send.disabled=true;input.disabled=true;
+  try{
+   const url=new URL(endpoint);url.searchParams.set("installationId",installationId);
+   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);
+   try{
+    const response=await fetch(url.toString(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({installationId,question}),signal:controller.signal,credentials:"omit"});
+    const data=await response.json();
+    addMessage(response.ok&&typeof data.answer==="string"?data.answer:"Assistant unavailable. Please try again later.",false);
+   }finally{clearTimeout(timer);}
+  }catch{addMessage("Connection unavailable. Please try again later.",false);}
+  finally{send.disabled=false;input.disabled=false;input.focus();}
+ });
+ form.append(input,send);panel.append(header,messages,form,powered);shadow.append(style,panel,launch);document.body.append(root);
 })();
