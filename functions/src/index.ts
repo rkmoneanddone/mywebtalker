@@ -1,3 +1,4 @@
+import {getPaymentSettings} from "./payment-config.js";
 import {getConfiguredPlan,getBrandingConfig,parsePlan} from "./plan-config.js";
 import {initializeApp,getApps} from "firebase-admin/app";
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
@@ -47,7 +48,8 @@ export const ensureCustomer=onCall({region,enforceAppCheck:false},async request=
 /** Return public prices and quotas, cached by clients; prices remain configurable in Firestore. */
 export const listPlans=onCall({region},async()=>{
  const plans=await Promise.all(validPlanIds.map(getPlan));
- return {plans,branding:await getBrandingConfig(),checkoutEnabled:false};
+ const payments=await getPaymentSettings();
+ return {plans,branding:await getBrandingConfig(),checkoutEnabled:payments.enabled&&false};
 });
 /** Evaluate server-side trial and subscription state without accepting a client-paid flag. */
 export const getMyEntitlements=onCall({region},async request=>{
@@ -84,7 +86,9 @@ export const adminUpdatePlan=onCall({region},async request=>{
 /** Reject checkout until a payment provider is configured; never grant paid access from a browser request. */
 export const createCheckout=onCall({region},async request=>{
  requireUid(request.auth);
- throw new HttpsError("failed-precondition","Payment provider not configured. No charge was made.");
+ const payments=await getPaymentSettings();
+ if(!payments.enabled)throw new HttpsError("failed-precondition","Payments are disabled. No charge was made.");
+ throw new HttpsError("failed-precondition","Selected gateway adapter is not activated. No charge was made.");
 });
 /** Payment webhook endpoint intentionally refuses requests until signature verification is implemented. */
 export const paymentWebhook=onRequest({region},(_request,response)=>{
