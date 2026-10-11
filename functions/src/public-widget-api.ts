@@ -44,11 +44,15 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
  if(req.method!=="POST"){res.set("Allow","POST");res.status(405).json({error:"Method not allowed"});return;}
  if(!req.is("application/json")){res.status(415).json({error:"JSON required"});return;}
  const payload=req.body;
- if(!payload||typeof payload!=="object"||Array.isArray(payload)||Object.keys(payload).some(k=>k!=="installationId"&&k!=="question")||Number(req.get("content-length")||0)>2048){res.status(400).json({error:"Invalid request"});return;}
- const {installationId,question}=payload;
+ if(!payload||typeof payload!=="object"||Array.isArray(payload)||Object.keys(payload).some(k=>k!=="installationId"&&k!=="question"&&k!=="visitorToken")||Number(req.get("content-length")||0)>2048){res.status(400).json({error:"Invalid request"});return;}
+ const {installationId,question,visitorToken}=payload;
+ if(typeof visitorToken!=="string"||!/^[a-f0-9]{64}$/.test(visitorToken)){res.status(403).json({error:"Start chat with your contact details first"});return;}
  if(!validInstallationId(installationId)||!validVisitorQuestion(question)){res.status(400).json({error:"Invalid request"});return;}
  try{
   const {uid,site,websiteId}=await resolveInstallation(installationId);
+  const sessionHash=createHash("sha256").update(visitorToken).digest("hex");
+  const session=await db.doc("visitorSessions/"+sessionHash).get();
+  if(!session.exists||session.get("uid")!==uid||session.get("websiteId")!==websiteId||session.get("installationId")!==installationId||!(session.get("expiresAt") instanceof Timestamp)||session.get("expiresAt").toMillis()<=Date.now()){res.status(403).json({error:"Visitor session expired. Start chat again."});return;}
   // CORS is a browser restriction, not a substitute for rate limiting or tenant isolation.
   const origin=req.get("origin");
   if(!allowedBrowserOrigin(origin,site.get("url"))){res.status(403).json({error:"Unapproved website origin"});return;}
