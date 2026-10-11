@@ -1,7 +1,7 @@
 import KnowledgePanel from "./KnowledgePanel";
 import {getFunctions,httpsCallable} from "firebase/functions";
 import {useEffect,useState} from "react";
-import {addDoc,collection,doc,getDoc,getDocs,serverTimestamp,setDoc,updateDoc} from "firebase/firestore";
+import {collection,doc,getDoc,getDocs,serverTimestamp,setDoc,updateDoc} from "firebase/firestore";
 import type {Timestamp} from "firebase/firestore";
 import type {User} from "firebase/auth";
 import {Bot,MessageCircle} from "lucide-react";
@@ -87,10 +87,9 @@ export default function Workspace({user}:{user:User}){
   setSaving(true);setError("");setNotice("");
   try{
    const url=normalizeWebsite(site.trim());
-   if(websites.length>=5)throw Error("Maximum 5 registered websites for now.");
    if(websites.some(w=>w.url===url))throw Error("Website already registered.");
-   const added=await addDoc(collection(db,"customers",user.uid,"websites"),{url,status:"pending",createdAt:serverTimestamp()});
-   setWebsites(v=>[...v,{id:added.id,url,status:"pending"}]);setSite("");
+   const result=await httpsCallable<{url:string},{websiteId:string}>(getFunctions(app,"asia-south1"),"registerWebsite")({url});
+   setWebsites(v=>[...v,{id:result.data.websiteId,url,status:"pending"}]);setSite("");
    setNotice("Website registered. Start ownership verification below.");
   }catch(e){setError(e instanceof Error?e.message:"Website registration failed");}
   finally{setSaving(false);}
