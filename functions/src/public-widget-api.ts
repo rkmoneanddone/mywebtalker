@@ -12,7 +12,27 @@ const responseHeaders={"Cache-Control":"no-store","X-Content-Type-Options":"nosn
 /** Gate public widget requests without making paid model calls or returning private passages. */
 export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:15,maxInstances:3,invoker:"public"},async(req,res)=>{
  res.set(responseHeaders);
- if(req.method==="OPTIONS"){res.status(403).json({error:"Widget preflight is not enabled"});return;}
+ if(req.method==="OPTIONS"){
+  const requestedMethod=req.get("access-control-request-method");
+  const requestedHeaders=req.get("access-control-request-headers")||"";
+  if(requestedMethod!=="POST"||!/^content-type$/i.test(requestedHeaders.trim())){
+   res.status(403).json({error:"Unsupported preflight"});return;
+  }
+  const installationId=req.query.installationId;
+  try{
+   if(!validInstallationId(installationId))throw Error("Invalid installation");
+   const {site}=await resolveInstallation(installationId);
+   const origin=req.get("origin");
+   if(!allowedBrowserOrigin(origin,site.get("url"))||site.get("widgetPublished")!==true)throw Error("Not published");
+   res.set("Access-Control-Allow-Origin",origin!);
+   res.set("Vary","Origin");
+   res.set("Access-Control-Allow-Methods","POST");
+   res.set("Access-Control-Allow-Headers","Content-Type");
+   res.set("Access-Control-Max-Age","300");
+   res.status(204).end();
+  }catch{res.status(403).json({error:"Widget unavailable"});}
+  return;
+ }
  if(req.method!=="POST"){res.set("Allow","POST");res.status(405).json({error:"Method not allowed"});return;}
  if(!req.is("application/json")){res.status(415).json({error:"JSON required"});return;}
  const {installationId,question}=req.body||{};
