@@ -1,3 +1,4 @@
+import {getConfiguredPlan,getBrandingConfig,parsePlan} from "./plan-config.js";
 import {initializeApp,getApps} from "firebase-admin/app";
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
 import {onCall,HttpsError} from "firebase-functions/v2/https";
@@ -30,7 +31,7 @@ function asPlan(value:unknown,id:PlanId):Plan{
 /** Read server-controlled plans; no frontend price can affect checkout or access. */
 async function getPlan(id:PlanId):Promise<Plan>{
  const snap=await store.doc(`publicConfig/plans/entries/${id}`).get();
- return asPlan(snap.data(),id);
+ return parsePlan(snap.data(),id);
 }
 /** Create a customer once; transaction ensures concurrent first logins share one trial. */
 export const ensureCustomer=onCall({region,enforceAppCheck:false},async request=>{
@@ -46,7 +47,7 @@ export const ensureCustomer=onCall({region,enforceAppCheck:false},async request=
 /** Return public prices and quotas, cached by clients; prices remain configurable in Firestore. */
 export const listPlans=onCall({region},async()=>{
  const plans=await Promise.all(validPlanIds.map(getPlan));
- return {plans,branding:{inrMinor:49900,usdMinor:700,enabled:false,frequency:"unconfigured"},checkoutEnabled:false};
+ return {plans,branding:await getBrandingConfig(),checkoutEnabled:false};
 });
 /** Evaluate server-side trial and subscription state without accepting a client-paid flag. */
 export const getMyEntitlements=onCall({region},async request=>{
@@ -75,7 +76,7 @@ export const adminUpdatePlan=onCall({region},async request=>{
  requireAdmin(request.auth);
  const data=request.data as Plan;
  if(!data||!validPlanIds.includes(data.id))throw new HttpsError("invalid-argument","Unknown plan");
- const plan=asPlan(data,data.id);
+ const plan=parsePlan(data,data.id);
  if(JSON.stringify(plan)!==JSON.stringify(data))throw new HttpsError("invalid-argument","Invalid plan configuration");
  await store.doc(`publicConfig/plans/entries/${data.id}`).set(plan);
  return {ok:true};
