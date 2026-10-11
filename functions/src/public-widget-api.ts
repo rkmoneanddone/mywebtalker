@@ -3,7 +3,7 @@ import {initializeApp,getApps} from "firebase-admin/app";
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
 import {onRequest} from "firebase-functions/v2/https";
 import {defineSecret} from "firebase-functions/params";
-import {rankPassages} from "./knowledge.js";
+import {rankPassages,searchTerms} from "./knowledge.js";
 import {resolveInstallation} from "./widget-installation.js";
 import {allowedBrowserOrigin,minuteBucket,validInstallationId,validVisitorQuestion} from "./widget-security.js";
 import {DEFAULT_PLANS,evaluateAccess} from "./entitlements.js";
@@ -74,12 +74,9 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
    tx.set(usageRef,{responses:FieldValue.increment(1),period,updatedAt:FieldValue.serverTimestamp()},{merge:true});
   });
   // Retrieval remains bounded; production load testing must measure Firestore read cost.
-  const documents=await db.collection(`customers/${uid}/websites/${websiteId}/knowledge`).limit(30).get();
-  const passages:{id:string;text:string}[]=[];
-  for(const document of documents.docs){
-   const chunks=await document.ref.collection("chunks").limit(100).get();
-   for(const chunk of chunks.docs)passages.push({id:`${document.id}/${chunk.id}`,text:String(chunk.get("text")||"").slice(0,1800)});
-  }
+  const terms=searchTerms(question,10);
+  const matches=terms.length?await db.collection(`customers/${uid}/websites/${websiteId}/knowledgeIndex`).where("terms","array-contains-any",terms).limit(25).get():null;
+  const passages=(matches?.docs||[]).map(doc=>({id:doc.id,text:String(doc.get("text")||"").slice(0,1800)}));
   const ranked=rankPassages(question,passages,5);
   if(!ranked.length){
    await usageRef.update({responses:FieldValue.increment(-1)});
