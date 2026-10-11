@@ -10,7 +10,7 @@ import {app,db} from "./firebase";
 const positions=["bottom-right","bottom-center","top-right"] as const;
 type Position=typeof positions[number];
 type Settings={companyName:string;botName:string;color:string;position:Position};
-type Website={id:string;url:string;status:string};
+type Website={id:string;url:string;status:string;widgetInstallationId?:string;widgetPublished?:boolean};
 const defaults:Settings={companyName:"Your Company",botName:"Your AI Assistant",color:"#6d5efc",position:"bottom-right"};
 
 /** Normalize user input to a public HTTPS hostname; never accept credentials or local addresses. */
@@ -38,6 +38,7 @@ export default function Workspace({user}:{user:User}){
  const [createdAt,setCreatedAt]=useState<Timestamp>();
  const [websites,setWebsites]=useState<Website[]>([]);
  const [site,setSite]=useState("");
+ const [installations,setInstallations]=useState<Record<string,string>>({});
  const [selectedWebsite,setSelectedWebsite]=useState("");
  const [loading,setLoading]=useState(true);
  const [saving,setSaving]=useState(false);
@@ -63,7 +64,7 @@ export default function Workspace({user}:{user:User}){
     const loaded:Settings={...defaults,...stored};
     validateSettings(loaded);
     const sites=await getDocs(collection(db,"customers",user.uid,"websites"));
-    if(active){setSettings(loaded);setCreatedAt(data?.createdAt as Timestamp|undefined);setWebsites(sites.docs.map(d=>({id:d.id,url:String(d.data().url),status:String(d.data().status)})));}
+    if(active){setSettings(loaded);setCreatedAt(data?.createdAt as Timestamp|undefined);setWebsites(sites.docs.map(d=>({id:d.id,url:String(d.data().url),status:String(d.data().status),widgetInstallationId:d.data().widgetInstallationId,widgetPublished:d.data().widgetPublished===true})));}
    }catch(e){if(active)setError(e instanceof Error?e.message:"Could not load workspace");}
    finally{if(active)setLoading(false);}
   }
@@ -90,6 +91,25 @@ export default function Workspace({user}:{user:User}){
    setWebsites(v=>[...v,{id:added.id,url,status:"pending"}]);setSite("");
    setNotice("Website registered. Start DNS ownership verification below.");
   }catch(e){setError(e instanceof Error?e.message:"Website registration failed");}
+  finally{setSaving(false);}
+ }
+ /** Mint installation IDs and publish only via authenticated owner functions. */
+ async function manageWidget(id:string,publish?:boolean){
+  if(!app)return;
+  setSaving(true);setError("");setNotice("");
+  try{
+   const functions=getFunctions(app,"asia-south1");
+   if(typeof publish==="boolean"){
+    await httpsCallable(functions,"setWidgetPublication")({websiteId:id,published:publish});
+    setWebsites(items=>items.map(w=>w.id===id?{...w,widgetPublished:publish}:w));
+    setNotice(publish?"Widget published.":"Widget unpublished.");
+   }else{
+    const result=await httpsCallable<{websiteId:string},{installationId:string}>(functions,"createWidgetInstallation")({websiteId:id});
+    setInstallations(v=>({...v,[id]:result.data.installationId}));
+    setWebsites(items=>items.map(w=>w.id===id?{...w,widgetInstallationId:result.data.installationId,widgetPublished:false}:w));
+    setNotice("Installation created. Publish separately after testing.");
+   }
+  }catch(e){setError(e instanceof Error?e.message:"Widget action failed");}
   finally{setSaving(false);}
  }
  /** Issue and confirm ownership proofs through trusted Firebase Functions. */
@@ -126,6 +146,16 @@ export default function Workspace({user}:{user:User}){
     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><input aria-label="Website URL" style={{flex:"1 1 240px",padding:12,border:"1px solid #dcdfe9",borderRadius:8}} placeholder="https://example.com" value={site} onChange={e=>setSite(e.target.value)}/><button className="btn" disabled={saving||!site.trim()} onClick={()=>void registerSite()}>Add website</button></div>
     {websites.map(w=><p key={w.id} style={{overflowWrap:"anywhere"}}>{w.url} — <strong>{w.status==="pending"?"Pending verification":w.status}</strong> {w.status!=="verified"&&<button disabled={saving} onClick={()=>void verifySite(w.id,false)}>Start verification</button>}{verification[w.id]&&w.status!=="verified"&&<span style={{display:"block",marginTop:8}}>Create TXT record <code>{verification[w.id].recordName}</code> with value <code>{verification[w.id].recordValue}</code> <button disabled={saving} onClick={()=>void verifySite(w.id,true)}>Confirm</button></span>}</p>)}
    </div>
+   {websites.filter(w=>w.status==="verified").map(w=><div key={"widget-"+w.id} className="dash-card" style={{marginTop:16}}>
+    <h3>Widget installation — {w.url}</h3>
+    <p className="subtle">The public chatbot is still in safe placeholder mode. Publishing does not activate AI answers.</p>
+    <button disabled={saving} onClick={()=>void manageWidget(w.id)}>Generate installation ID</button>
+    {(installations[w.id]||w.widgetInstallationId)&&<>
+     <p>Installation ID: <code>{installations[w.id]||w.widgetInstallationId}</code></p>
+     <p>Publication: <strong>{w.widgetPublished?"Published":"Off"}</strong></p>
+     <button disabled={saving} onClick={()=>void manageWidget(w.id,!w.widgetPublished)}>{w.widgetPublished?"Unpublish":"Publish"}</button>
+    </>}
+   </div>)}
    {websites.length>0&&<div className="dash-card" style={{marginTop:20}}><h2>Choose knowledge website</h2><select value={selectedWebsite||websites[0]?.id||""} onChange={e=>setSelectedWebsite(e.target.value)}>{websites.map(w=><option key={w.id} value={w.id}>{w.url}</option>)}</select></div>}
    {websites.length>0&&<KnowledgePanel key={selectedWebsite||websites[0].id} websiteId={selectedWebsite||websites[0].id}/>}
   </>}
