@@ -1,3 +1,4 @@
+import {lookupFaq} from "./faq-store.js";
 import {findDirectFaqAnswer} from "./direct-answer.js";
 import {reserveAiBudget,recordAiUsage} from "./ai-budget.js";
 import {createHash} from "node:crypto";
@@ -75,6 +76,8 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
    tx.set(siteLimitRef,{count:FieldValue.increment(1),expiresAt:Timestamp.fromMillis(Date.now()+3600000)},{merge:true});
    tx.set(usageRef,{responses:FieldValue.increment(1),period,updatedAt:FieldValue.serverTimestamp()},{merge:true});
   });
+  const indexedFaq=await lookupFaq(uid,websiteId,question);
+  if(indexedFaq){await usageRef.update({responses:FieldValue.increment(-1)});res.status(200).json({answer:indexedFaq.answer,ready:true,answerMode:"direct"});return;}
   // Retrieval remains bounded; production load testing must measure Firestore read cost.
   const terms=searchTerms(question,10);
   const matches=terms.length?await db.collection(`customers/${uid}/websites/${websiteId}/knowledgeIndex`).where("terms","array-contains-any",terms).limit(25).get():null;
