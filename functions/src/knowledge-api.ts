@@ -1,9 +1,11 @@
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
+import {initializeApp,getApps} from "firebase-admin/app";
 import {onCall,HttpsError} from "firebase-functions/v2/https";
 import {extractKnowledge,rankPassages} from "./knowledge.js";
 import {DEFAULT_PLANS,evaluateAccess} from "./entitlements.js";
 import type {BillingState,PlanId} from "./entitlements.js";
 
+if(!getApps().length)initializeApp();
 const db=getFirestore();
 const region="asia-south1";
 const MAX_DOCUMENTS=30;
