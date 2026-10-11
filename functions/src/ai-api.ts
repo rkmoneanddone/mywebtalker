@@ -1,3 +1,4 @@
+import {reservePlanAiResponse,releasePlanAiResponse} from "./ai-plan-quota.js";
 import {getConfiguredPlan} from "./plan-config.js";
 import {extractPassageAnswer} from "./passage-answer.js";
 import {lookupFaq} from "./faq-store.js";
@@ -68,7 +69,8 @@ export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_AP
  const key=OPENAI_API_KEY.value();
  if(!key)throw new HttpsError("failed-precondition","AI provider is not configured");
  const period=await reserveUsage(uid);
- try{await reserveAiBudget(uid);}catch{await db.doc(`usage/${uid}/months/${period}`).update({responses:FieldValue.increment(-1)});throw new HttpsError("resource-exhausted","AI daily or monthly budget reached");}
+ let aiMonth:string|undefined;
+ try{aiMonth=await reservePlanAiResponse(uid);await reserveAiBudget(uid);}catch{if(aiMonth)await releasePlanAiResponse(uid,aiMonth);await db.doc(`usage/${uid}/months/${period}`).update({responses:FieldValue.increment(-1)});throw new HttpsError("resource-exhausted","AI response quota or budget reached");}
  const context=passages.map(p=>p.text).join("\n---\n").slice(0,9000);
  const controller=new AbortController();
  const timeout=setTimeout(()=>controller.abort(),25000);
@@ -86,6 +88,7 @@ export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_AP
   await recordAiUsage(uid,json.usage).catch(()=>undefined);
   return {answer:json.choices?.[0]?.message?.content||"No answer generated.",sources:passages.map(p=>p.id)};
  }catch{
+  if(aiMonth)await releasePlanAiResponse(uid,aiMonth).catch(()=>undefined);
   await db.doc(`usage/${uid}/months/${period}`).update({responses:FieldValue.increment(-1)}).catch(()=>undefined);
   throw new HttpsError("unavailable","AI response is temporarily unavailable");
  }finally{clearTimeout(timeout);}
