@@ -12,7 +12,8 @@ const responseHeaders={"Cache-Control":"no-store","X-Content-Type-Options":"nosn
 /** Gate public widget requests without making paid model calls or returning private passages. */
 export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:15,maxInstances:3,invoker:"public"},async(req,res)=>{
  res.set(responseHeaders);
- if(req.method==="OPTIONS"){res.status(403).json({error:"Widget preflight is not enabled"});return;}\n if(req.method!=="POST"){res.set("Allow","POST");res.status(405).json({error:"Method not allowed"});return;}
+ if(req.method==="OPTIONS"){res.status(403).json({error:"Widget preflight is not enabled"});return;}
+ if(req.method!=="POST"){res.set("Allow","POST");res.status(405).json({error:"Method not allowed"});return;}
  if(!req.is("application/json")){res.status(415).json({error:"JSON required"});return;}
  const {installationId,question}=req.body||{};
  if(!validInstallationId(installationId)||!validVisitorQuestion(question)){res.status(400).json({error:"Invalid request"});return;}
