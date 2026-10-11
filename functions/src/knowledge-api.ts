@@ -9,6 +9,8 @@ if(!getApps().length)initializeApp();
 const db=getFirestore();
 const region="asia-south1";
 const MAX_DOCUMENTS=30;
+const MAX_UPLOADS_PER_DAY=10;
+const MAX_DAILY_BYTES=1024*1024;
 
 /** Require a verified signed-in customer for every private knowledge operation. */
 function customerId(request:{auth?:{uid:string;token:{email_verified?:boolean}}}):string{
@@ -53,12 +55,22 @@ export const uploadKnowledge=onCall({region,memory:"1GiB",timeoutSeconds:120,max
  try{extracted=await extractKnowledge(filename,Buffer.from(base64,"base64"));}
  catch(error){throw new HttpsError("invalid-argument",error instanceof Error?error.message:"Invalid document");}
  if(extracted.chunks.length>450)throw new HttpsError("resource-exhausted","Too many chunks for one document");
+ // Reserve daily upload allowance atomically before writing indexed text. No original file is persisted.
+ const day=new Date().toISOString().slice(0,10);
+ const uploadLimit=db.doc(`uploadLimits/${uid}/days/${day}`);
+ const uploadedBytes=Buffer.byteLength(base64,"base64");
+ await db.runTransaction(async tx=>{
+  const snap=await tx.get(uploadLimit);
+  if(Number(snap.get("count")||0)>=MAX_UPLOADS_PER_DAY||Number(snap.get("bytes")||0)+uploadedBytes>MAX_DAILY_BYTES)
+   throw new HttpsError("resource-exhausted","Daily upload allowance reached");
+  tx.set(uploadLimit,{count:FieldValue.increment(1),bytes:FieldValue.increment(uploadedBytes),updatedAt:FieldValue.serverTimestamp()},{merge:true});
+ });
  const docRef=collectionRef.doc();
  // Firestore batches are capped at 500 writes; this upload is capped at 450 chunks.
  const batch=db.batch();
  batch.create(docRef,{filename:extracted.filename,type:extracted.type,characters:extracted.characters,chunkCount:extracted.chunks.length,createdAt:FieldValue.serverTimestamp()});
  extracted.chunks.forEach((text,index)=>batch.create(docRef.collection("chunks").doc(String(index).padStart(5,"0")),{text,index}));
- await batch.commit();
+ try{await batch.commit();}catch(error){await uploadLimit.update({count:FieldValue.increment(-1),bytes:FieldValue.increment(-uploadedBytes)}).catch(()=>undefined);throw error;}
  return {id:docRef.id,filename:extracted.filename,characters:extracted.characters,chunks:extracted.chunks.length};
 });
 /** List a bounded catalogue of documents belonging to a registered website. */
