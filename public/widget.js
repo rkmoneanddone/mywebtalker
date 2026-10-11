@@ -22,7 +22,7 @@
  const leadForm=document.createElement("form");leadForm.className="form";leadForm.style.cssText="display:flex;flex-direction:column;gap:8px";
  const leadName=document.createElement("input");leadName.placeholder="Your name";leadName.required=true;leadName.minLength=2;leadName.maxLength=100;
  const leadEmail=document.createElement("input");leadEmail.placeholder="Email address";leadEmail.type="email";leadEmail.required=true;leadEmail.maxLength=254;
- const leadMobile=document.createElement("input");leadMobile.placeholder="Mobile number with country code";leadMobile.type="tel";leadMobile.required=true;leadMobile.pattern="\\+?[1-9][0-9]{7,14}";
+ const leadMobile=document.createElement("input");leadMobile.placeholder="Mobile number with country code";leadMobile.type="tel";leadMobile.required=true;leadMobile.pattern="[+]?[1-9][0-9]{7,14}";
  const leadButton=document.createElement("button");leadButton.type="submit";leadButton.textContent="Start chatting";
  const leadError=document.createElement("div");leadError.style.color="#a00";leadError.setAttribute("role","alert");
  leadForm.append(leadName,leadEmail,leadMobile,leadButton,leadError);
