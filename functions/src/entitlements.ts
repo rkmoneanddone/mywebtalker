@@ -17,9 +17,9 @@ export interface AccessDecision {
 }
 export const DEFAULT_FEATURES={visitorLeads:true,aiAnswers:true,knowledgeUploads:true,botCustomization:true,brandingRemoval:true};
 export const DEFAULT_PLANS:Record<PlanId,Plan>={
- self:{id:"self",name:"Self Hosted",inrMinor:49900,usdMinor:900,responsesPerMonth:300,aiResponsesPerMonth:100,websites:1,knowledgePages:100,managed:false,enabled:true,features:{...DEFAULT_FEATURES}},
- managed:{id:"managed",name:"Managed",inrMinor:89900,usdMinor:1400,responsesPerMonth:500,aiResponsesPerMonth:200,websites:1,knowledgePages:250,managed:true,enabled:true,features:{...DEFAULT_FEATURES}},
- pro:{id:"pro",name:"Managed Pro",inrMinor:219900,usdMinor:2400,responsesPerMonth:2000,aiResponsesPerMonth:800,websites:3,knowledgePages:1000,managed:true,enabled:true,features:{...DEFAULT_FEATURES}}
+ self:{id:"self",name:"Self Hosted",inrMinor:49900,usdMinor:900,responsesPerMonth:300,aiResponsesPerMonth:300,websites:1,knowledgePages:100,managed:false,enabled:true,features:{...DEFAULT_FEATURES}},
+ managed:{id:"managed",name:"Managed",inrMinor:89900,usdMinor:1400,responsesPerMonth:500,aiResponsesPerMonth:500,websites:1,knowledgePages:250,managed:true,enabled:true,features:{...DEFAULT_FEATURES}},
+ pro:{id:"pro",name:"Managed Pro",inrMinor:219900,usdMinor:2400,responsesPerMonth:2000,aiResponsesPerMonth:2000,websites:3,knowledgePages:1000,managed:true,enabled:true,features:{...DEFAULT_FEATURES}}
 };
 /** Return a pure, auditable entitlement decision; payment data must come from trusted server state. */
 export function evaluateAccess(billing:BillingState,plan:Plan,nowMs:number,used:number):AccessDecision{
