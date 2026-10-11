@@ -1,3 +1,4 @@
+import {lookupFaq} from "./faq-store.js";
 import {findDirectFaqAnswer} from "./direct-answer.js";
 import {reserveAiBudget,recordAiUsage} from "./ai-budget.js";
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
@@ -52,6 +53,8 @@ export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_AP
  if(typeof websiteId!=="string"||!/^[A-Za-z0-9_-]{1,100}$/.test(websiteId)||typeof question!=="string"||question.length<2||question.length>500)throw new HttpsError("invalid-argument","Invalid request");
  const website=await db.doc(`customers/${uid}/websites/${websiteId}`).get();
  if(!website.exists)throw new HttpsError("not-found","Website not registered");
+ const indexedFaq=await lookupFaq(uid,websiteId,question);
+ if(indexedFaq){const period=await reserveUsage(uid);await db.doc(`usage/${uid}/months/${period}`).update({responses:FieldValue.increment(-1)});return {answer:indexedFaq.answer,sources:[indexedFaq.sourceId],answerMode:"direct"};}
  const passages=await retrieve(uid,websiteId,question);
  if(passages.length===0)return {answer:"I couldn't find that information in the uploaded knowledge.",sources:[]};
  const direct=findDirectFaqAnswer(question,passages);
