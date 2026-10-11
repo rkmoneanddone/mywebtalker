@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {extractKnowledge,chunkText,rankPassages} from "../lib/knowledge.js";
+import {extractKnowledge,chunkText,rankPassages,searchTerms} from "../lib/knowledge.js";
 
 test("TXT extraction retains the 125th record",async()=>{
  const text=Array.from({length:125},(_,i)=>"Record "+(i+1)).join("\n");
@@ -27,4 +27,10 @@ test("Office uploads reject non-ZIP data before extraction",async()=>{
  for(const extension of ["docx","xlsx"]){
   await assert.rejects(extractKnowledge("fake."+extension,Buffer.from("not a zip")),/Invalid Office ZIP archive/);
  }
+});
+
+test("indexed search terms are bounded, deduplicated and omit common words",()=>{
+ assert.deepEqual(searchTerms("What services services are available?",10),["services","available"]);
+ assert.ok(searchTerms(Array.from({length:100},(_,i)=>"term"+i).join(" "),10).length<=10);
+ assert.ok(searchTerms("a".repeat(100),10)[0]?.length<=48);
 });
