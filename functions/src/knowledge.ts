@@ -1,5 +1,3 @@
-import mammoth from "mammoth";
-import ExcelJS from "exceljs";
 import {validateOfficeArchive} from "./office-archive.js";
 
 export type KnowledgeFileType="txt"|"md"|"json"|"docx"|"xlsx";
@@ -29,6 +27,7 @@ export function chunkText(text:string,size=1200,overlap=150):string[]{
 }
 /** Reject multi-tab or oversized workbooks; only a single bounded worksheet is accepted. */
 async function extractExcel(bytes:Buffer):Promise<string>{
+ const {default:ExcelJS}=await import("exceljs");
  const workbook=new ExcelJS.Workbook();
  await workbook.xlsx.load(bytes as never);
  if(workbook.worksheets.length!==1)throw Error("Excel must contain exactly one worksheet/tab");
@@ -61,6 +60,7 @@ export async function extractKnowledge(filename:string,bytes:Buffer):Promise<Ext
  if(type==="docx"||type==="xlsx")validateOfficeArchive(bytes);
  let text:string;
  if(type==="docx"){
+  const {default:mammoth}=await import("mammoth");
   const result=await mammoth.extractRawText({buffer:bytes});
   text=result.value;
  }else if(type==="xlsx"){
