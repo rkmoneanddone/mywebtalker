@@ -87,9 +87,18 @@ export async function processGatewayEvent(provider:Provider,payload:any):Promise
  const sub=provider==="razorpay"?payload?.payload?.subscription?.entity:payload?.data;
  const subscriptionId=String(sub?.subscription_id||sub?.id||"");
  if(!subscriptionId) return;
- const matches=await db.collection("paymentIntents").where("provider","==",provider).where("providerSubscriptionId","==",subscriptionId).limit(1).get();
- if(matches.empty)return;
- const intent=matches.docs[0],value=intent.data();
+ const intentId=String(sub?.metadata?.intentId||"");
+ let intent;
+ if(provider==="dodo"&&/^[A-Za-z0-9]{15,40}$/.test(intentId)){
+  const candidate=await db.collection("paymentIntents").doc(intentId).get();
+  if(candidate.exists&&candidate.get("provider")==="dodo")intent=candidate;
+ }
+ if(!intent){
+  const matches=await db.collection("paymentIntents").where("provider","==",provider).where("providerSubscriptionId","==",subscriptionId).limit(1).get();
+  if(matches.empty)return;
+  intent=matches.docs[0];
+ }
+ const value=intent.data()!;
  if(!ids.includes(value.planId))return;
  const paid=provider==="razorpay"?["subscription.activated","subscription.charged"].includes(eventType):["subscription.active","subscription.renewed"].includes(eventType);
  const ended=provider==="razorpay"?["subscription.halted","subscription.cancelled","subscription.expired"].includes(eventType):["subscription.failed","subscription.cancelled","subscription.expired"].includes(eventType);
