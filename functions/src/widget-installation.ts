@@ -22,8 +22,10 @@ export const createWidgetInstallation=onCall({region},async request=>{
  await db.runTransaction(async tx=>{
   const fresh=await tx.get(ref);
   if(fresh.get("status")!=="verified")throw new HttpsError("failed-precondition","Website not verified");
+  const previous=fresh.get("widgetInstallationId");
+  if(typeof previous==="string"&&/^w_[a-f0-9]{40}$/.test(previous))tx.update(db.doc(`widgetInstallations/${previous}`),{enabled:false,revokedAt:FieldValue.serverTimestamp()});
   tx.set(db.doc(`widgetInstallations/${installationId}`),{uid,websiteId,createdAt:FieldValue.serverTimestamp(),enabled:true});
-  tx.update(ref,{widgetInstallationId:installationId});
+  tx.update(ref,{widgetInstallationId:installationId,widgetPublished:false});
  });
  return {installationId};
 });
