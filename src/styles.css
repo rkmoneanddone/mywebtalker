@@ -44,3 +44,46 @@
  .dashboard-heading h1{font-size:30px}
  .account-dropdown{right:0}
 }
+
+/* Compact knowledge and appearance workspaces */
+.knowledge-site-bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:16px 20px;border:1px solid #e2e6f0;border-radius:14px;background:#fff;margin-top:16px}
+.knowledge-site-bar label{font-weight:700;white-space:nowrap;color:#15213b}
+.knowledge-site-bar select{flex:1 1 260px;min-width:0;margin:0}
+.knowledge-workspace{margin-top:16px!important}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.section-title h2{margin:6px 0}
+.section-title p{margin:0}
+.knowledge-count{background:#f0efff;border-radius:20px;padding:7px 12px;font-size:12px;color:#5c4cce;font-weight:750;white-space:nowrap}
+.knowledge-section{border-top:1px solid #e8ebf2;margin-top:24px;padding-top:22px}
+.knowledge-section-heading{display:flex;gap:12px;align-items:flex-start}
+.knowledge-section-heading h3{margin:3px 0 4px;font-size:17px}
+.knowledge-section-heading p{margin:0 0 16px}
+.knowledge-upload{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:1.5px dashed #c7c9ee;background:#fafaff;border-radius:12px;min-height:122px;padding:20px;cursor:pointer;text-align:center}
+.knowledge-upload:hover{border-color:#6654f5;background:#f6f4ff}
+.knowledge-upload small{color:#69758b}
+.knowledge-upload input{max-width:100%;font-size:13px;margin-top:8px}
+.upload-symbol{font-size:22px;color:#6554f5}
+.knowledge-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.knowledge-documents{border:1px solid #e8ebf2;border-radius:12px;overflow:hidden}
+.knowledge-document{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #edf0f5}
+.knowledge-document:last-child{border-bottom:0}
+.knowledge-document strong{display:block;overflow-wrap:anywhere}
+.knowledge-document small{display:block;color:#718098;margin-top:4px}
+.knowledge-empty{background:#f8f9fc;border-radius:10px;padding:18px;color:#68758b}
+.knowledge-question{display:block;font-weight:650}
+.knowledge-question input{margin-top:8px}
+.knowledge-result{margin-top:18px;background:#f7f7ff;border-radius:12px;padding:16px;overflow-wrap:anywhere}
+.knowledge-result p{font-size:13px;line-height:1.65}
+.appearance-settings,.appearance-preview{min-width:0}
+.appearance-settings label{margin-top:13px}
+.appearance-color-row{display:flex;align-items:center;gap:12px;padding:8px;border:1px solid #e0e4ef;border-radius:10px;margin-top:7px}
+.appearance-color-row input[type=color]{width:64px;height:36px;flex-shrink:0;padding:0;margin:0;border:0;cursor:pointer}
+.appearance-color-row code{font-size:13px;color:#53617b}
+.appearance-position{border:0;padding:0;margin:16px 0 0;min-width:0}
+.appearance-position legend{font-weight:700;margin-bottom:10px}
+.position-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.position-choices button{padding:11px 6px;border:1px solid #dce0eb;background:#fff;border-radius:9px;text-transform:capitalize;font-size:12px;font-weight:650;cursor:pointer}
+.position-choices button.selected{background:#f1efff;border-color:#6554f5;color:#5a49e0}
+.appearance-save{margin-top:20px;display:flex;justify-content:flex-end}
+.appearance-preview .preview{margin-top:16px}
+@media(max-width:760px){.knowledge-site-bar{padding:14px;align-items:stretch;gap:8px}.knowledge-site-bar label{width:100%}.knowledge-site-bar select{flex-basis:100%}.position-choices{grid-template-columns:1fr}.knowledge-document{align-items:flex-start}.knowledge-upload{min-height:110px}.appearance-save .btn{width:100%}}
