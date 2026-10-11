@@ -1,7 +1,7 @@
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
 import {initializeApp,getApps} from "firebase-admin/app";
 import {onCall,HttpsError} from "firebase-functions/v2/https";
-import {extractKnowledge,rankPassages} from "./knowledge.js";
+import {extractKnowledge,rankPassages,MAX_KNOWLEDGE_BYTES} from "./knowledge.js";
 import {DEFAULT_PLANS,evaluateAccess} from "./entitlements.js";
 import type {BillingState,PlanId} from "./entitlements.js";
 
@@ -43,7 +43,7 @@ export const uploadKnowledge=onCall({region,memory:"1GiB",timeoutSeconds:120,max
  const websiteId=safeId(request.data?.websiteId);
  const filename=request.data?.filename;
  const base64=request.data?.base64;
- if(typeof filename!=="string"||typeof base64!=="string"||base64.length>7_100_000||!/^[A-Za-z0-9+/]*={0,2}$/.test(base64))throw new HttpsError("invalid-argument","Invalid upload");
+ if(typeof filename!=="string"||typeof base64!=="string"||base64.length>Math.ceil(MAX_KNOWLEDGE_BYTES/3)*4||!/^[A-Za-z0-9+/]*={0,2}$/.test(base64))throw new HttpsError("invalid-argument","Invalid upload");
  const website=await db.doc(`customers/${uid}/websites/${websiteId}`).get();
  if(!website.exists)throw new HttpsError("not-found","Website not registered");
  const collectionRef=db.collection(`customers/${uid}/websites/${websiteId}/knowledge`);
