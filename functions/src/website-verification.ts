@@ -31,7 +31,7 @@ export function verificationHost(raw:string):string{
 async function verifyHtmlFile(host:string,token:string):Promise<boolean>{
  const addresses=await lookup(host,{all:true,verbatim:true});
  if(!addresses.length||addresses.some(({address})=>{
-  if(isIP(address)===4){const n=address.split(".").map(Number);return n[0]===0||n[0]===10||n[0]===127||n[0]>=224||n[0]===169&&n[1]===254||n[0]===172&&n[1]>=16&&n[1]<=31||n[0]===192&&n[1]===168||n[0]===100&&n[1]>=64&&n[1]<=127||n[0]===192&&n[1]===0||n[0]===198&&n[1]>=18&&n[1]<=19;}
+  if(isIP(address)===4){const [a=0,b=0,c=0,d=0]=address.split(".").map(Number);return a===0||a===10||a===127||a>=224||a===169&&b===254||a===172&&b>=16&&b<=31||a===192&&b===168||a===100&&b>=64&&b<=127||a===192&&b===0||a===198&&b>=18&&b<=19;}
   const a=address.toLowerCase();return a==="::1"||a==="::"||a.startsWith("fc")||a.startsWith("fd")||a.startsWith("fe8")||a.startsWith("fe9")||a.startsWith("fea")||a.startsWith("feb")||a.startsWith("::ffff:");
  }))throw Error("Non-public address");
  const address=addresses[0]!;
