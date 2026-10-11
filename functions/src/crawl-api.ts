@@ -1,3 +1,5 @@
+import {DEFAULT_PLANS,evaluateAccess} from "./entitlements.js";
+import type {BillingState,PlanId} from "./entitlements.js";
 import {lookup} from "node:dns/promises";
 import {isIP} from "node:net";
 import {request as httpsRequest} from "node:https";
@@ -44,7 +46,11 @@ export const crawlWebsiteHomepage=onCall({region:"asia-south1",timeoutSeconds:25
  if(!site.exists||site.get("status")!=="verified")throw new HttpsError("permission-denied","Verified website required");
  const customer=await db.doc(`customers/${uid}`).get();
  const created=customer.get("createdAt");
- if(!created||typeof created.toMillis!=="function"||Date.now()>created.toMillis()+7*86400000)throw new HttpsError("permission-denied","Active trial required for crawling");
+ if(!created||typeof created.toMillis!=="function")throw new HttpsError("permission-denied","Customer account missing");
+ const subscription=(await db.doc(`privateBilling/${uid}`).get()).data();
+ const planId:PlanId=subscription?.planId==="self"||subscription?.planId==="pro"?subscription.planId:"managed";
+ const state:BillingState={status:subscription?.status==="active"?"active":subscription?.status==="expired"?"expired":subscription?.status==="past_due"?"past_due":subscription?.status==="cancelled"?"cancelled":"trial",planId,trialEndMs:created.toMillis()+7*86400000,periodEndMs:subscription?.periodEnd?.toMillis?.(),brandingEnabled:false};
+ if(!evaluateAccess(state,DEFAULT_PLANS[planId],Date.now(),0).allowed)throw new HttpsError("permission-denied","Active trial or subscription required");
  let host:string;
  try{host=verificationHost(String(site.get("url")||""));}
  catch{throw new HttpsError("invalid-argument","Invalid website URL");}
