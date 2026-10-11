@@ -1,7 +1,7 @@
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
 import {initializeApp,getApps} from "firebase-admin/app";
 import {onCall,HttpsError} from "firebase-functions/v2/https";
-import {extractKnowledge,rankPassages,MAX_KNOWLEDGE_BYTES} from "./knowledge.js";
+import {extractKnowledge,rankPassages,searchTerms,MAX_KNOWLEDGE_BYTES} from "./knowledge.js";
 import {DEFAULT_PLANS,evaluateAccess} from "./entitlements.js";
 import type {BillingState,PlanId} from "./entitlements.js";
 
@@ -69,7 +69,7 @@ export const uploadKnowledge=onCall({region,memory:"1GiB",timeoutSeconds:120,max
  // Firestore batches are capped at 500 writes; this upload is capped at 450 chunks.
  const batch=db.batch();
  batch.create(docRef,{filename:extracted.filename,type:extracted.type,characters:extracted.characters,chunkCount:extracted.chunks.length,createdAt:FieldValue.serverTimestamp()});
- extracted.chunks.forEach((text,index)=>batch.create(docRef.collection("chunks").doc(String(index).padStart(5,"0")),{text,index}));
+ extracted.chunks.forEach((text,index)=>{const chunkId=String(index).padStart(5,"0");batch.create(docRef.collection("chunks").doc(chunkId),{text,index});batch.create(db.doc(`customers/${uid}/websites/${websiteId}/knowledgeIndex/${docRef.id}_${chunkId}`),{sourceId:docRef.id,text,terms:searchTerms(text)});});
  try{await batch.commit();}catch(error){await uploadLimit.update({count:FieldValue.increment(-1),bytes:FieldValue.increment(-uploadedBytes)}).catch(()=>undefined);throw error;}
  return {id:docRef.id,filename:extracted.filename,characters:extracted.characters,chunks:extracted.chunks.length};
 });
@@ -95,7 +95,7 @@ export const deleteKnowledge=onCall({region},async request=>{
  const chunks=await ref.collection("chunks").limit(451).get();
  if(chunks.size>450)throw new HttpsError("failed-precondition","Document requires administrative cleanup");
  const batch=db.batch();
- chunks.docs.forEach(d=>batch.delete(d.ref));
+ chunks.docs.forEach(d=>{batch.delete(d.ref);batch.delete(db.doc(`customers/${uid}/websites/${websiteId}/knowledgeIndex/${documentId}_${d.id}`));});
  batch.delete(ref);
  await batch.commit();
  return {ok:true};
@@ -109,11 +109,8 @@ export const searchKnowledge=onCall({region},async request=>{
  if(typeof question!=="string"||question.length<2||question.length>500)throw new HttpsError("invalid-argument","Question must be 2–500 characters");
  const website=await db.doc(`customers/${uid}/websites/${websiteId}`).get();
  if(!website.exists)throw new HttpsError("not-found","Website not registered");
- const docs=await db.collection(`customers/${uid}/websites/${websiteId}/knowledge`).limit(MAX_DOCUMENTS).get();
- const passages:{id:string;text:string}[]=[];
- for(const doc of docs.docs){
-  const chunks=await doc.ref.collection("chunks").limit(450).get();
-  for(const chunk of chunks.docs)passages.push({id:`${doc.id}/${chunk.id}`,text:String(chunk.get("text")||"")});
- }
- return {passages:rankPassages(question,passages)};
+ const terms=searchTerms(question,10);
+ if(!terms.length)return {passages:[]};
+ const matches=await db.collection(`customers/${uid}/websites/${websiteId}/knowledgeIndex`).where("terms","array-contains-any",terms).limit(25).get();
+ return {passages:rankPassages(question,matches.docs.map(d=>({id:d.id,text:String(d.get("text")||"")})))};
 });
