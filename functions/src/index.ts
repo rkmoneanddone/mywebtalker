@@ -108,3 +108,5 @@ export {publicWidgetChat} from "./public-widget-api.js";
 
 /** Ingest only the verified homepage; no uploaded file or raw HTML is retained. */
 export {crawlWebsiteHomepage} from "./crawl-api.js";
+
+export {registerWebsite} from "./website-registration.js";
