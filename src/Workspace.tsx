@@ -90,7 +90,7 @@ export default function Workspace({user}:{user:User}){
    if(websites.some(w=>w.url===url))throw Error("Website already registered.");
    const added=await addDoc(collection(db,"customers",user.uid,"websites"),{url,status:"pending",createdAt:serverTimestamp()});
    setWebsites(v=>[...v,{id:added.id,url,status:"pending"}]);setSite("");
-   setNotice("Website registered. Start DNS ownership verification below.");
+   setNotice("Website registered. Start ownership verification below.");
   }catch(e){setError(e instanceof Error?e.message:"Website registration failed");}
   finally{setSaving(false);}
  }
@@ -114,12 +114,12 @@ export default function Workspace({user}:{user:User}){
   finally{setSaving(false);}
  }
  /** Issue and confirm ownership proofs through trusted Firebase Functions. */
- async function verifySite(id:string,confirm:boolean){
+ async function verifySite(id:string,confirm:boolean,method:"dns"|"html"="dns"){
   if(!app)return;
   setSaving(true);setError("");setNotice("");
   try{
    const name=confirm?"confirmWebsiteVerification":"beginWebsiteVerification";
-   const result=await httpsCallable<{websiteId:string},{verified:boolean;recordName?:string;recordValue?:string}>(getFunctions(app,"asia-south1"),name)({websiteId:id});
+   const result=await httpsCallable<{websiteId:string},{verified:boolean;recordName?:string;recordValue?:string}>(getFunctions(app,"asia-south1"),name)({websiteId:id,method});
    if(result.data.verified){setWebsites(items=>items.map(w=>w.id===id?{...w,status:"verified"}:w));setNotice("Website ownership verified.");}
    else if(result.data.recordName&&result.data.recordValue){setVerification(v=>({...v,[id]:{recordName:result.data.recordName!,recordValue:result.data.recordValue!}}));setNotice("Add the DNS TXT record, then click Confirm.");}
   }catch(e){setError(e instanceof Error?e.message:"Verification failed");}
@@ -144,9 +144,9 @@ export default function Workspace({user}:{user:User}){
      {open&&<><div className="preview-message">Hello! 👋 How can I help you today?</div><div className="preview-input">Type your message...</div><div className="powered">Powered by <b>mywebtalker</b></div></>}
     </div><button aria-label="Toggle chat preview" className={"preview-launch "+settings.position} style={{background:settings.color,border:0}} onClick={()=>setOpen(!open)}><MessageCircle/></button></div></div>
    </div>
-   {activeTab==="websites"&&<><div className="dash-card" style={{marginTop:20}}><h2>My websites</h2><p className="subtle">Register a public HTTPS domain. Ownership verification uses a DNS TXT record; only the domain owner can add it.</p>
+   {activeTab==="websites"&&<><div className="dash-card" style={{marginTop:20}}><h2>My websites</h2><p className="subtle">Register a public HTTPS domain. Verify ownership with either a DNS TXT record or an HTTPS verification file.</p>
     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><input aria-label="Website URL" style={{flex:"1 1 240px",padding:12,border:"1px solid #dcdfe9",borderRadius:8}} placeholder="https://example.com" value={site} onChange={e=>setSite(e.target.value)}/><button className="btn" disabled={saving||!site.trim()} onClick={()=>void registerSite()}>Add website</button></div>
-    {websites.map(w=><p key={w.id} style={{overflowWrap:"anywhere"}}>{w.url} — <strong>{w.status==="pending"?"Pending verification":w.status}</strong> {w.status!=="verified"&&<button disabled={saving} onClick={()=>void verifySite(w.id,false)}>Start verification</button>}{verification[w.id]&&w.status!=="verified"&&<span style={{display:"block",marginTop:8}}>Create TXT record <code>{verification[w.id].recordName}</code> with value <code>{verification[w.id].recordValue}</code> <button disabled={saving} onClick={()=>void verifySite(w.id,true)}>Confirm</button></span>}</p>)}
+    {websites.map(w=><p key={w.id} style={{overflowWrap:"anywhere"}}>{w.url} — <strong>{w.status==="pending"?"Pending verification":w.status}</strong> {w.status!=="verified"&&<button disabled={saving} onClick={()=>void verifySite(w.id,false)}>Start verification</button>}{verification[w.id]&&w.status!=="verified"&&<span style={{display:"block",marginTop:8}}><strong>Option 1 — DNS TXT:</strong> Create <code>{verification[w.id].recordName}</code> with value <code>{verification[w.id].recordValue}</code> <button disabled={saving} onClick={()=>void verifySite(w.id,true,"dns")}>Verify DNS</button><span style={{display:"block",marginTop:10}}><strong>Option 2 — HTML file:</strong> Host a plain-text file at <code>{w.url}/.well-known/mywebtalker-verification.txt</code> containing exactly <code>{verification[w.id].recordValue}</code> <button disabled={saving} onClick={()=>void verifySite(w.id,true,"html")}>Verify file</button></span></span>}</p>)}
    </div>
    {websites.filter(w=>w.status==="verified").map(w=><div key={"widget-"+w.id} className="dash-card" style={{marginTop:16}}>
     <h3>Widget installation — {w.url}</h3>
