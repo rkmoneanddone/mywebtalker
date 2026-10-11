@@ -1,22 +1,30 @@
-# Embeddable widget — integration preview
+# MyWebTalker widget installation
 
-The initial `public/widget.js` is a safe, non-interactive chat shell. It does **not** yet send AI requests.
-
-After the frontend is hosted at `https://YOUR-WIDGET-HOST`, a website owner may add:
+1. Sign in, register your HTTPS website and complete DNS TXT ownership verification.
+2. Generate an installation ID in the dashboard.
+3. Deploy the Firebase Function `publicWidgetChat` and configure the `OPENAI_API_KEY` secret.
+4. Publish the installation only after verifying the production endpoint and quotas.
+5. Add the following script to the verified website:
 
 ```html
-<script async src="https://YOUR-WIDGET-HOST/widget.js" data-site-id="YOUR_VERIFIED_WEBSITE_ID"></script>
+<script async src="https://YOUR-WIDGET-HOST/widget.js"
+  data-installation-id="w_YOUR_SERVER_ISSUED_40_HEX_CHARACTERS"
+  data-api-url="https://YOUR_DEPLOYED_PUBLIC_WIDGET_CHAT_FUNCTION_URL"></script>
 ```
 
-The script creates one fixed-position launcher and a Shadow DOM chat panel. The current version intentionally displays a setup message.
+The installation ID is public and is not an authentication credential. Server-side domain verification, billing checks, per-IP and per-installation throttling, and tenant isolation remain mandatory.
 
-## Requirements before enabling visitor AI
+## Production verification
 
-- Authenticate widget installation using a server-issued public installation identifier, not a user-controlled Firestore path.
-- Validate the registered verified domain server-side. Origin/Referer checks alone are not authentication and can be forged by non-browser clients.
-- Enforce per-site and per-IP abuse controls, quotas, input limits and billing checks before model calls.
-- Bind every retrieval query to the verified tenant; never accept arbitrary customer IDs from the public endpoint.
-- Protect the crawler from SSRF, redirects to private addresses, DNS rebinding, oversized responses and unbounded page counts.
-- Add emulator tests for tenant isolation and rate limiting; do not activate public AI before these pass.
+- Build frontend and backend and run backend tests.
+- Verify preflight OPTIONS and POST from the registered origin; reject unrelated origins.
+- Verify unpublished/revoked installations cannot chat.
+- Verify one customer's documents cannot be retrieved by another customer's installation.
+- Verify trial expiry, monthly quotas and high concurrency before accepting paying users.
+- Confirm OpenAI usage/cost budgets and provider failure handling.
+- Load test on a staging project; a successful build does not prove thousand-user concurrency.
+- Configure payment provider and verify signed webhooks before enabling checkout.
 
-No payment provider or paid AI request is required to test the shell.
+## Operational caveats
+
+The current retrieval reads up to 30 documents and 100 chunks per document per request. This is bounded, but costly at scale. Production optimization should use a precomputed or indexed retrieval layer. Quota units are reserved before provider calls and are not refunded after provider failure, to prevent unmetered retry loops. Rate limits use Firestore transactional counters; highly concurrent requests may contend. No paid AI requests are made merely by deploying the widget; requests incur charges when visitors ask questions.
