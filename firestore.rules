@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signedIn(uid) { return request.auth != null && request.auth.uid == uid; }
+  function validSettings(s) {
+   return s is map && s.keys().hasOnly(['companyName','botName','color','position'])
+    && s.keys().hasAll(['companyName','botName','color','position'])
+    && s.companyName is string && s.companyName.size() > 0 && s.companyName.size() <= 80
+    && s.botName is string && s.botName.size() > 0 && s.botName.size() <= 80
+    && s.color is string && s.color.matches('^#[0-9a-fA-F]{6}$')
+    && s.position in ['bottom-right','bottom-center','top-right'];
+  }
+  function trialActive(uid) {
+   return get(/databases/$(database)/documents/customers/$(uid)).data.createdAt + duration.value(7,'d') > request.time;
+  }
+  match /customers/{uid} {
+   allow read: if signedIn(uid);
+   allow create: if signedIn(uid)
+    && request.resource.data.keys().hasOnly(['email','createdAt','settings'])
+    && request.resource.data.keys().hasAll(['email','createdAt','settings'])
+    && request.resource.data.email == request.auth.token.email
+    && request.resource.data.createdAt == request.time
+    && validSettings(request.resource.data.settings);
+   allow update: if signedIn(uid)
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['settings'])
+    && validSettings(request.resource.data.settings);
+   allow delete: if false;
+   match /websites/{websiteId} {
+    allow read: if signedIn(uid);
+    allow create: if signedIn(uid) && trialActive(uid)
+     && request.resource.data.keys().hasOnly(['url','status','createdAt'])
+     && request.resource.data.keys().hasAll(['url','status','createdAt'])
+     && request.resource.data.status == 'pending'
+     && request.resource.data.createdAt == request.time
+     && request.resource.data.url is string
+     && request.resource.data.url.size() <= 255
+     && request.resource.data.url.matches('^https://[a-zA-Z0-9.-]+$');
+    allow update, delete: if false;
+   }
+  }
+  match /{document=**} { allow read, write: if false; }
+ }
+}
