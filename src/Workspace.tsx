@@ -125,7 +125,7 @@ export default function Workspace({user}:{user:User}){
   finally{setSaving(false);}
  }
  return <div>
-  <div className="notice">Signed in as {user.email}. {trialInfo(createdAt)}. AI responses, verification and billing remain unavailable until their secure services are deployed.</div>
+  <div className="notice">Signed in as {user.email}. {trialInfo(createdAt)}. Live AI and verification require deployed Firebase Functions. Payments are not enabled yet.</div>
   {error&&<div className="config-note" role="alert">{error}</div>}
   {notice&&<div className="notice" role="status">{notice}</div>}
   {loading?<div className="dash-card">Loading your workspace…</div>:<>
@@ -148,7 +148,7 @@ export default function Workspace({user}:{user:User}){
    </div>
    {websites.filter(w=>w.status==="verified").map(w=><div key={"widget-"+w.id} className="dash-card" style={{marginTop:16}}>
     <h3>Widget installation — {w.url}</h3>
-    <p className="subtle">The public chatbot is still in safe placeholder mode. Publishing does not activate AI answers.</p>
+    <p className="subtle">Publishing activates the live AI endpoint once Firebase Functions are deployed and the OpenAI secret is configured. AI usage may incur charges.</p>
     <button disabled={saving} onClick={()=>void manageWidget(w.id)}>Generate installation ID</button>
     {(installations[w.id]||w.widgetInstallationId)&&<>
      <p>Installation ID: <code>{installations[w.id]||w.widgetInstallationId}</code></p>
