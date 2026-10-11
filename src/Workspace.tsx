@@ -34,6 +34,7 @@ function trialInfo(createdAt?:Timestamp):string{
 }
 /** Signed-in workspace; only Firestore rules can grant tenant access and enforce trial writes. */
 export default function Workspace({user}:{user:User}){
+ const [activeTab,setActiveTab]=useState<"websites"|"knowledge"|"appearance">("websites");
  const [settings,setSettings]=useState<Settings>(defaults);
  const [createdAt,setCreatedAt]=useState<Timestamp>();
  const [websites,setWebsites]=useState<Website[]>([]);
@@ -128,8 +129,9 @@ export default function Workspace({user}:{user:User}){
   <div className="notice">Signed in as {user.email}. {trialInfo(createdAt)}. Live AI and verification require deployed Firebase Functions. Payments are not enabled yet.</div>
   {error&&<div className="config-note" role="alert">{error}</div>}
   {notice&&<div className="notice" role="status">{notice}</div>}
+  <nav aria-label="Workspace sections" style={{display:"flex",gap:10,flexWrap:"wrap",margin:"20px 0"}}>{([["websites","My Websites"],["knowledge","Knowledge Library"],["appearance","Appearance"]] as const).map(([id,label])=><button key={id} type="button" aria-current={activeTab===id?"page":undefined} className={activeTab===id?"btn":"btn secondary"} onClick={()=>{setActiveTab(id);setError("");setNotice("");}}>{label}</button>)}</nav>
   {loading?<div className="dash-card">Loading your workspace…</div>:<>
-   <div className="dash-grid">
+   {activeTab==="appearance"&&<div className="dash-grid">
     <div className="dash-card"><h2>Appearance</h2><p className="subtle">Changes are previewed immediately. Save to persist them.</p>
      <label>Company name<input value={settings.companyName} maxLength={80} onChange={e=>setSettings(s=>({...s,companyName:e.target.value}))}/></label>
      <label>Chatbot name<input value={settings.botName} maxLength={80} onChange={e=>setSettings(s=>({...s,botName:e.target.value}))}/></label>
@@ -142,7 +144,7 @@ export default function Workspace({user}:{user:User}){
      {open&&<><div className="preview-message">Hello! 👋 How can I help you today?</div><div className="preview-input">Type your message...</div><div className="powered">Powered by <b>mywebtalker</b></div></>}
     </div><button aria-label="Toggle chat preview" className={"preview-launch "+settings.position} style={{background:settings.color,border:0}} onClick={()=>setOpen(!open)}><MessageCircle/></button></div></div>
    </div>
-   <div className="dash-card" style={{marginTop:20}}><h2>My websites</h2><p className="subtle">Register a public HTTPS domain. Ownership verification uses a DNS TXT record; only the domain owner can add it.</p>
+   {activeTab==="websites"&&<><div className="dash-card" style={{marginTop:20}}><h2>My websites</h2><p className="subtle">Register a public HTTPS domain. Ownership verification uses a DNS TXT record; only the domain owner can add it.</p>
     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><input aria-label="Website URL" style={{flex:"1 1 240px",padding:12,border:"1px solid #dcdfe9",borderRadius:8}} placeholder="https://example.com" value={site} onChange={e=>setSite(e.target.value)}/><button className="btn" disabled={saving||!site.trim()} onClick={()=>void registerSite()}>Add website</button></div>
     {websites.map(w=><p key={w.id} style={{overflowWrap:"anywhere"}}>{w.url} — <strong>{w.status==="pending"?"Pending verification":w.status}</strong> {w.status!=="verified"&&<button disabled={saving} onClick={()=>void verifySite(w.id,false)}>Start verification</button>}{verification[w.id]&&w.status!=="verified"&&<span style={{display:"block",marginTop:8}}>Create TXT record <code>{verification[w.id].recordName}</code> with value <code>{verification[w.id].recordValue}</code> <button disabled={saving} onClick={()=>void verifySite(w.id,true)}>Confirm</button></span>}</p>)}
    </div>
@@ -156,8 +158,11 @@ export default function Workspace({user}:{user:User}){
      <button disabled={saving} onClick={()=>void manageWidget(w.id,!w.widgetPublished)}>{w.widgetPublished?"Unpublish":"Publish"}</button>
     </>}
    </div>)}
+   </>}
+   {activeTab==="knowledge"&&<>{websites.length===0&&<div className="dash-card">Add a website in My Websites before uploading knowledge.</div>}
    {websites.length>0&&<div className="dash-card" style={{marginTop:20}}><h2>Choose knowledge website</h2><select value={selectedWebsite||websites[0]?.id||""} onChange={e=>setSelectedWebsite(e.target.value)}>{websites.map(w=><option key={w.id} value={w.id}>{w.url}</option>)}</select></div>}
    {websites.length>0&&<KnowledgePanel key={selectedWebsite||websites[0].id} websiteId={selectedWebsite||websites[0].id}/>}
+   </>}
   </>}
  </div>;
 }
