@@ -75,6 +75,17 @@ export default function KnowledgePanel({websiteId}:{websiteId:string}){
   }catch(e){setError(e instanceof Error?e.message:"Could not rebuild search index");}
   finally{setBusy(false);}
  }
+ /** Fetch only the verified homepage and replace its indexed excerpts. */
+ async function crawlHomepage(){
+  if(!functions)return;
+  setBusy(true);setError("");setMessage("");
+  try{
+   const fn=httpsCallable<{websiteId:string},{pages:number;characters:number;passages:number}>(functions,"crawlWebsiteHomepage",{timeout:30000});
+   const result=await fn({websiteId});
+   setMessage(`Homepage indexed: ${result.data.characters} characters in ${result.data.passages} passages. No HTML file stored.`);
+  }catch(e){setError(e instanceof Error?e.message:"Homepage crawl failed");}
+  finally{setBusy(false);}
+ }
  /** Preview relevant source passages before enabling the AI provider adapter. */
  async function search(){
   if(!functions||question.trim().length<2)return;
@@ -104,6 +115,7 @@ export default function KnowledgePanel({websiteId}:{websiteId:string}){
    <div className="knowledge-actions"><button className="btn" disabled={busy||!file} onClick={()=>void upload()}>{busy?"Working…":"Upload and index"}</button>{file&&<button className="btn secondary" disabled={busy} onClick={()=>setFile(null)}>Clear selection</button>}</div>
   </section>
   <section className="knowledge-section"><div className="knowledge-section-heading"><span className="step-number">2</span><div><h3>Uploaded documents</h3><p className="subtle">Manage the information available to this website's chatbot.</p></div></div>
+   <div className="knowledge-actions"><button className="btn secondary small" disabled={busy} onClick={()=>void crawlHomepage()}>Import verified website homepage</button></div>
    {items.length>0&&<div className="knowledge-actions"><button className="btn secondary small" disabled={busy} onClick={()=>void rebuildIndex()}>Rebuild search index (existing documents)</button></div>}
    {items.length===0?<div className="knowledge-empty">No documents uploaded yet. Add your first file above.</div>:<div className="knowledge-documents">{items.map(item=><div key={item.id} className="knowledge-document"><div><strong>{item.filename}</strong><small>{item.chunkCount} indexed passages</small></div><button className="btn secondary small" disabled={busy} onClick={()=>void remove(item.id)}>Delete</button></div>)}</div>}
   </section>
