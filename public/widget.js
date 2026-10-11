@@ -45,6 +45,8 @@
  });
  form.style.display="none";
  const powered=document.createElement("div");powered.className="powered";powered.textContent="Powered by MyWebTalker";
+ const configUrl=new URL(endpoint);configUrl.pathname=configUrl.pathname.slice(0,configUrl.pathname.lastIndexOf("/")+1)+"publicWidgetConfig";configUrl.searchParams.set("installationId",installationId);
+ void fetch(configUrl.toString(),{credentials:"omit"}).then(response=>{if(!response.ok)throw Error("config");return response.json();}).then(config=>{if(config.brandingRemoved===true)powered.remove();if(typeof config.botName==="string"&&config.botName.trim())header.textContent=config.botName.slice(0,80);if(typeof config.color==="string"&&/^#[0-9a-fA-F]{6}$/.test(config.color)){header.style.backgroundColor=config.color;send.style.backgroundColor=config.color;leadButton.style.backgroundColor=config.color;launch.style.backgroundColor=config.color;}}).catch(()=>undefined);
  const launch=document.createElement("button");launch.className="launch";launch.type="button";launch.textContent="Chat with us";launch.setAttribute("aria-expanded","false");
  function addMessage(value,user){const msg=document.createElement("div");msg.className="msg"+(user?" user":"");msg.textContent=value;messages.append(msg);messages.scrollTop=messages.scrollHeight;}
  addMessage("Hello! How can I help you?",false);
