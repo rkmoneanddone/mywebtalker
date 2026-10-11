@@ -16,8 +16,8 @@ export async function getConfiguredPlan(id:PlanId):Promise<Plan>{
  const snap=await db.doc(`publicConfig/plans/entries/${id}`).get();
  return parsePlan(snap.data(),id);
 }
-export async function getBrandingConfig():Promise<{inrMinor:number;enabled:boolean;frequency:"one_time"}>{
+export async function getBrandingConfig():Promise<{inrMinor:number;usdMinor:number;enabled:boolean;frequency:"one_time"}>{
  const snap=await db.doc("publicConfig/branding").get();
  const value=snap.data();
- return {inrMinor:Number.isSafeInteger(value?.inrMinor)&&value!.inrMinor>=0?value!.inrMinor:99900,enabled:value?.enabled===true,frequency:"one_time"};
+ return {inrMinor:Number.isSafeInteger(value?.inrMinor)&&value!.inrMinor>=0?value!.inrMinor:99900,usdMinor:Number.isSafeInteger(value?.usdMinor)&&value!.usdMinor>=0?value!.usdMinor:900,enabled:value?.enabled===true,frequency:"one_time"};
 }
