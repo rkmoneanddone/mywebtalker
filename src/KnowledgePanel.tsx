@@ -23,6 +23,7 @@ export default function KnowledgePanel({websiteId}:{websiteId:string}){
  const [message,setMessage]=useState("");
  const [question,setQuestion]=useState("");
  const [passages,setPassages]=useState<{id:string;text:string;score:number}[]>([]);
+ const [answer,setAnswer]=useState("");
  /** Refresh only the selected website's document catalogue. */
  async function refresh(){
   if(!functions)return;
@@ -72,6 +73,16 @@ export default function KnowledgePanel({websiteId}:{websiteId:string}){
   }catch(e){setError(e instanceof Error?e.message:"Search failed");}
   finally{setBusy(false);}
  }
+ /** Request an AI answer grounded only in uploaded knowledge, subject to backend quotas. */
+ async function askAI(){
+  if(!functions||question.trim().length<2)return;
+  setBusy(true);setError("");setAnswer("");
+  try{
+   const result=await httpsCallable<{websiteId:string;question:string},{answer:string}>(functions,"askPrivateKnowledge",{timeout:60000})({websiteId,question});
+   setAnswer(result.data.answer);
+  }catch(e){setError(e instanceof Error?e.message:"AI is not configured or available");}
+  finally{setBusy(false);}
+ }
  return <div className="dash-card" style={{marginTop:20}}>
   <h2>Knowledge library</h2>
   <p className="subtle">Upload TXT, JSON, Word DOCX, Excel XLSX or Markdown. Maximum 5 MB per file. Uploaded content is private to your account.</p>
@@ -87,6 +98,8 @@ export default function KnowledgePanel({websiteId}:{websiteId:string}){
   <p className="subtle">Shows matching excerpts. This is not yet an AI-generated answer.</p>
   <input value={question} maxLength={500} placeholder="Ask a question about your documents" onChange={e=>setQuestion(e.target.value)}/>
   <button className="btn secondary small" disabled={busy||question.trim().length<2} onClick={()=>void search()}>Find relevant passages</button>
+  <button className="btn small" style={{marginLeft:8}} disabled={busy||question.trim().length<2} onClick={()=>void askAI()}>Ask AI (uses quota)</button>
+  {answer&&<p role="status" style={{whiteSpace:"pre-wrap",padding:12,background:"#f5f3ff",borderRadius:8}}>{answer}</p>}
   {passages.map(p=><p key={p.id} style={{whiteSpace:"pre-wrap",fontSize:12,padding:12,background:"#f8f8ff",borderRadius:8}}>{p.text}</p>)}
  </div>;
 }
