@@ -33,7 +33,7 @@ async function reserveUsage(uid:string):Promise<void>{
   const subscription=billingSnap.data();
   const planId:PlanId=subscription?.planId==="self"||subscription?.planId==="pro"?subscription.planId:"managed";
   const state:BillingState={
-   status:subscription?.status==="active"?"active":subscription?.status==="trial"?"trial":"expired",
+   status:subscription?.status==="active"?"active":subscription?.status==="expired"?"expired":subscription?.status==="past_due"?"past_due":subscription?.status==="cancelled"?"cancelled":"trial",
    planId,trialEndMs:created.toMillis()+7*86400000,
    periodEndMs:subscription?.periodEnd?.toMillis?.(),brandingEnabled:false
   };
