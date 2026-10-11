@@ -1,3 +1,4 @@
+import {extractPassageAnswer} from "./passage-answer.js";
 import {lookupFaq} from "./faq-store.js";
 import {findDirectFaqAnswer} from "./direct-answer.js";
 import {reserveAiBudget,recordAiUsage} from "./ai-budget.js";
@@ -85,6 +86,8 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
   const ranked=rankPassages(question,passages,5);
   const direct=findDirectFaqAnswer(question,ranked);
   if(direct){await usageRef.update({responses:FieldValue.increment(-1)}).catch(()=>undefined);res.status(200).json({answer:direct.answer,ready:true,answerMode:"direct"});return;}
+  const extractive=extractPassageAnswer(question,ranked);
+  if(extractive){await usageRef.update({responses:FieldValue.increment(-1)});res.status(200).json({answer:extractive.answer,ready:true,answerMode:"direct"});return;}
   if(!ranked.length){
    await usageRef.update({responses:FieldValue.increment(-1)});
    res.status(200).json({answer:"I could not find that information in the website knowledge.",ready:true});return;
