@@ -119,7 +119,7 @@ export default function Workspace({user}:{user:User}){
   setSaving(true);setError("");setNotice("");
   try{
    const name=confirm?"confirmWebsiteVerification":"beginWebsiteVerification";
-   const result=await httpsCallable<{websiteId:string},{verified:boolean;recordName?:string;recordValue?:string}>(getFunctions(app,"asia-south1"),name)({websiteId:id,method});
+   const result=await httpsCallable<{websiteId:string;method:"dns"|"html"},{verified:boolean;recordName?:string;recordValue?:string}>(getFunctions(app,"asia-south1"),name)({websiteId:id,method});
    if(result.data.verified){setWebsites(items=>items.map(w=>w.id===id?{...w,status:"verified"}:w));setNotice("Website ownership verified.");}
    else if(result.data.recordName&&result.data.recordValue){setVerification(v=>({...v,[id]:{recordName:result.data.recordName!,recordValue:result.data.recordValue!}}));setNotice("Add the DNS TXT record, then click Confirm.");}
   }catch(e){setError(e instanceof Error?e.message:"Verification failed");}
