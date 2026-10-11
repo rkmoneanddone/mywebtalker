@@ -28,6 +28,8 @@ async function reserveUsage(uid:string):Promise<string>{
  const billingRef=db.doc(`privateBilling/${uid}`);
  const period=new Date().toISOString().slice(0,7);
  const usageRef=db.doc(`usage/${uid}/months/${period}`);
+ const planSnapshot=await billingRef.get();
+ const configuredPlan=await getConfiguredPlan(planSnapshot.get("planId")==="self"?"self":planSnapshot.get("planId")==="pro"?"pro":"managed");
  await db.runTransaction(async tx=>{
   const [customer,billingSnap,usage]=await Promise.all([tx.get(customerRef),tx.get(billingRef),tx.get(usageRef)]);
   const created=customer.get("createdAt") as Timestamp|undefined;
@@ -40,7 +42,7 @@ async function reserveUsage(uid:string):Promise<string>{
    periodEndMs:subscription?.periodEnd?.toMillis?.(),brandingEnabled:false
   };
   const used=Number(usage.get("responses")||0);
-  const decision=evaluateAccess(state,await getConfiguredPlan(planId),Date.now(),used);
+  const decision=evaluateAccess(state,configuredPlan,Date.now(),used);
   if(!decision.allowed)throw new HttpsError("resource-exhausted","Subscription inactive or response quota exhausted");
   tx.set(usageRef,{responses:FieldValue.increment(1),period,updatedAt:FieldValue.serverTimestamp()},{merge:true});
  });
