@@ -101,3 +101,6 @@ export {beginWebsiteVerification,confirmWebsiteVerification} from "./website-ver
 
 /** Issue widget installations only after verified website ownership. */
 export {createWidgetInstallation} from "./widget-installation.js";
+
+/** Fail-closed visitor endpoint; public AI generation is not enabled. */
+export {publicWidgetChat} from "./public-widget-api.js";
