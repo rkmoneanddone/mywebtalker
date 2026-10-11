@@ -24,7 +24,7 @@ function asPlan(value:unknown,id:PlanId):Plan{
  const fallback=DEFAULT_PLANS[id];
  if(!value||typeof value!=="object")return fallback;
  const p=value as Partial<Plan>;
- if(p.id!==id||!Number.isSafeInteger(p.inrMinor)||!Number.isSafeInteger(p.usdMinor)||!Number.isSafeInteger(p.responsesPerMonth)||!Number.isSafeInteger(p.websites)||!Number.isSafeInteger(p.knowledgePages)||p.inrMinor!<0||p.usdMinor!<0||p.responsesPerMonth!<1||p.websites!<1||p.knowledgePages!<1||typeof p.enabled!=="boolean"||typeof p.managed!=="boolean"||typeof p.name!=="string")return fallback;
+ if(p.id!==id||!Number.isSafeInteger(p.inrMinor)||!Number.isSafeInteger(p.usdMinor)||!Number.isSafeInteger(p.responsesPerMonth)||!Number.isSafeInteger(p.websites)||!Number.isSafeInteger(p.knowledgePages)||p.inrMinor<0||p.usdMinor<0||p.responsesPerMonth<1||p.websites<1||p.knowledgePages<1||typeof p.enabled!=="boolean"||typeof p.managed!=="boolean"||typeof p.name!=="string")return fallback;
  return {...fallback,...p};
 }
 /** Read server-controlled plans; no frontend price can affect checkout or access. */
