@@ -12,7 +12,7 @@ if(!getApps().length)initializeApp();
 const db=getFirestore();
 const OPENAI_API_KEY=defineSecret("OPENAI_API_KEY");
 const responseHeaders={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"};
-/** Gate public widget requests without making paid model calls or returning private passages. */
+/** Serve tenant-scoped, knowledge-grounded visitor answers behind publication, origin, quota and rate checks. */
 export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,maxInstances:3,concurrency:10,secrets:[OPENAI_API_KEY],invoker:"public"},async(req,res)=>{
  res.set(responseHeaders);
  if(req.method==="OPTIONS"){
@@ -73,6 +73,7 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
    tx.set(siteLimitRef,{count:FieldValue.increment(1),expiresAt:Timestamp.fromMillis(Date.now()+3600000)},{merge:true});
    tx.set(usageRef,{responses:FieldValue.increment(1),period,updatedAt:FieldValue.serverTimestamp()},{merge:true});
   });
+  // Retrieval remains bounded; production load testing must measure Firestore read cost.
   const documents=await db.collection(`customers/${uid}/websites/${websiteId}/knowledge`).limit(30).get();
   const passages:{id:string;text:string}[]=[];
   for(const document of documents.docs){
