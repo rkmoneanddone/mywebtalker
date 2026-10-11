@@ -95,11 +95,14 @@ export const deleteKnowledge=onCall({region},async request=>{
  const chunks=await ref.collection("chunks").limit(451).get();
  const indexed=await db.collection(`customers/${uid}/websites/${websiteId}/knowledgeIndex`).where("sourceId","==",documentId).limit(451).get();
  if(chunks.size>450||indexed.size>450)throw new HttpsError("failed-precondition","Document requires administrative cleanup");
- const batch=db.batch();
- chunks.docs.forEach(d=>batch.delete(d.ref));
- indexed.docs.forEach(d=>batch.delete(d.ref));
- batch.delete(ref);
- await batch.commit();
+ // Delete in bounded batches; legacy documents can have both old and new copies.
+ const refs=[...chunks.docs.map(d=>d.ref),...indexed.docs.map(d=>d.ref)];
+ for(let start=0;start<refs.length;start+=400){
+  const batch=db.batch();
+  refs.slice(start,start+400).forEach(item=>batch.delete(item));
+  await batch.commit();
+ }
+ await ref.delete();
  return {ok:true};
 });
 /** Retrieve ranked knowledge excerpts privately; never expose arbitrary tenant data to visitors. */
