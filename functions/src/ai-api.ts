@@ -21,7 +21,7 @@ async function retrieve(uid:string,websiteId:string,question:string){
  return rankPassages(question,passages,6);
 }
 /** Atomically reserve one response against the customer's monthly allowance. */
-async function reserveUsage(uid:string):Promise<void>{
+async function reserveUsage(uid:string):Promise<string>{
  const customerRef=db.doc(`customers/${uid}`);
  const billingRef=db.doc(`privateBilling/${uid}`);
  const period=new Date().toISOString().slice(0,7);
@@ -42,6 +42,7 @@ async function reserveUsage(uid:string):Promise<void>{
   if(!decision.allowed)throw new HttpsError("resource-exhausted","Subscription inactive or response quota exhausted");
   tx.set(usageRef,{responses:FieldValue.increment(1),period,updatedAt:FieldValue.serverTimestamp()},{merge:true});
  });
+ return period;
 }
 /** Generate a private dashboard test answer only from relevant uploaded passages. */
 export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_API_KEY],timeoutSeconds:45,maxInstances:3},async request=>{
@@ -56,7 +57,8 @@ export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_AP
  if(passages.length===0)return {answer:"I couldn't find that information in the uploaded knowledge.",sources:[]};
  const key=OPENAI_API_KEY.value();
  if(!key)throw new HttpsError("failed-precondition","AI provider is not configured");
- await reserveUsage(uid);
+ const period=await reserveUsage(uid);
+ const context=passages.map(p=>p.text).join("\n---\n").slice(0,9000);
  const controller=new AbortController();
  const timeout=setTimeout(()=>controller.abort(),25000);
  try{
@@ -72,6 +74,7 @@ export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_AP
   const json=await response.json() as {choices?:{message?:{content?:string}}[]};
   return {answer:json.choices?.[0]?.message?.content||"No answer generated.",sources:passages.map(p=>p.id)};
  }catch{
-  throw new HttpsError("unavailable","AI response is temporarily unavailable; a quota unit may have been reserved");
+  await db.doc(`usage/${uid}/months/${period}`).update({responses:FieldValue.increment(-1)}).catch(()=>undefined);
+  throw new HttpsError("unavailable","AI response is temporarily unavailable");
  }finally{clearTimeout(timeout);}
 });
