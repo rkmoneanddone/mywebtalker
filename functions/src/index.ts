@@ -89,3 +89,6 @@ export const createCheckout=onCall({region},async request=>{
 export const paymentWebhook=onRequest({region},(_request,response)=>{
  response.status(503).send("Payment provider not configured");
 });
+
+/** Expose modular authenticated knowledge management endpoints. */
+export {uploadKnowledge,listKnowledge,deleteKnowledge,searchKnowledge} from "./knowledge-api.js";
