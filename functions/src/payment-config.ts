@@ -11,7 +11,7 @@ export async function getPaymentSettings():Promise<PaymentSettings>{
  });
  if(enabled.length>1)throw Error("Invalid payment configuration: only one gateway may be enabled");
  if(enabled.length===0)return {enabled:false,provider:null,mode:"test"};
- const provider=enabled[0];
+ const provider:PaymentProvider=enabled[0]!;
  const settings=gateways?.[provider] as {mode?:unknown}|undefined;
  return {enabled:true,provider,mode:settings?.mode==="live"?"live":"test"};
 }
