@@ -11,7 +11,7 @@ export function parsePlan(value:unknown,id:PlanId):Plan{
  const p=value as Partial<Plan>;
  if(p.id!==id||typeof p.name!=="string"||!p.name.trim()||p.name.length>80||typeof p.enabled!=="boolean"||typeof p.managed!=="boolean"||!Number.isSafeInteger(p.inrMinor)||Number(p.inrMinor)<0||!Number.isSafeInteger(p.usdMinor)||Number(p.usdMinor)<0||!Number.isSafeInteger(p.responsesPerMonth)||Number(p.responsesPerMonth)<1||!Number.isSafeInteger(p.websites)||Number(p.websites)<1||!Number.isSafeInteger(p.knowledgePages)||Number(p.knowledgePages)<1)return fallback;
  const aiResponsesPerMonth=p.aiResponsesPerMonth===undefined?fallback.aiResponsesPerMonth:p.aiResponsesPerMonth;
- if(!Number.isSafeInteger(aiResponsesPerMonth)||aiResponsesPerMonth<1||aiResponsesPerMonth>p.responsesPerMonth)return fallback;
+ if(!Number.isSafeInteger(aiResponsesPerMonth)||aiResponsesPerMonth<1||aiResponsesPerMonth>Number(p.responsesPerMonth))return fallback;
  const features=p.features&&typeof p.features==="object"&&!Array.isArray(p.features)?p.features:null;
  if(features&&Object.values(features).some(v=>typeof v!=="boolean"))return fallback;
  return {...fallback,...p,aiResponsesPerMonth,features:{...fallback.features,...features}};
