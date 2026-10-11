@@ -38,3 +38,19 @@ export async function resolveInstallation(installationId:unknown){
  if(!site.exists||site.get("status")!=="verified"||site.get("widgetInstallationId")!==installationId)throw new HttpsError("not-found","Installation revoked");
  return {uid,websiteId,site};
 }
+
+/** Owner-only publication switch. Default remains private until explicitly enabled. */
+export const setWidgetPublication=onCall({region},async request=>{
+ const uid=requireUid(request.auth);
+ const websiteId=request.data?.websiteId;
+ const published=request.data?.published;
+ if(!validId(websiteId)||typeof published!=="boolean")throw new HttpsError("invalid-argument","Invalid publication request");
+ const ref=db.doc(`customers/${uid}/websites/${websiteId}`);
+ await db.runTransaction(async tx=>{
+  const site=await tx.get(ref);
+  if(!site.exists||site.get("status")!=="verified"||typeof site.get("widgetInstallationId")!=="string")
+   throw new HttpsError("failed-precondition","Verify the website and create a widget installation first");
+  tx.update(ref,{widgetPublished:published,widgetPublicationUpdatedAt:FieldValue.serverTimestamp()});
+ });
+ return {published};
+});
