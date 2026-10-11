@@ -85,7 +85,7 @@ export const listKnowledge=onCall({region},async request=>{
  const websiteId=safeId(request.data?.websiteId);
  const website=await db.doc(`customers/${uid}/websites/${websiteId}`).get();
  if(!website.exists)throw new HttpsError("not-found","Website not registered");
- const snap=await db.collection(`customers/${uid}/websites/${websiteId}/knowledge`).limit(MAX_DOCUMENTS).get();
+ const snap=await db.collection(`customers/${uid}/websites/${websiteId}/knowledge`).limit(1000).get();
  return {documents:snap.docs.map(doc=>({id:doc.id,...doc.data()}))};
 });
 /** Delete an uploaded document and its chunks in a bounded batch. */
