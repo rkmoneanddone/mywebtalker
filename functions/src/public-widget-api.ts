@@ -68,7 +68,7 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:15,
    if(Number(rate.get("count")||0)>=5||Number(siteRate.get("count")||0)>=60)throw Error("rate");
    tx.set(limitRef,{count:FieldValue.increment(1),expiresAt:Timestamp.fromMillis(Date.now()+3600000)},{merge:true});
    tx.set(siteLimitRef,{count:FieldValue.increment(1),expiresAt:Timestamp.fromMillis(Date.now()+3600000)},{merge:true});
-   // Do not charge a response unit for this placeholder; no AI answer is generated.
+   // Placeholder mode: do not charge response quota until an AI response is generated.
   });
   res.status(200).json({answer:"This website assistant is not accepting AI questions yet. Please contact the website directly.",ready:false});
  }catch(error){
