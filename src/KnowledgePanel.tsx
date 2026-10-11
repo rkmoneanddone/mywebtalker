@@ -83,23 +83,22 @@ export default function KnowledgePanel({websiteId}:{websiteId:string}){
   }catch(e){setError(e instanceof Error?e.message:"AI is not configured or available");}
   finally{setBusy(false);}
  }
- return <div className="dash-card" style={{marginTop:20}}>
-  <h2>Knowledge library</h2>
-  <p className="subtle">Upload TXT, JSON, Word DOCX, Excel XLSX or Markdown. Maximum 256 KB per file. Excel: one worksheet, up to 500 rows and 30 columns. Uploaded content is private to your account.</p>
+ return <div className="dash-card knowledge-workspace">
+  <div className="section-title"><div><span className="setup-eyebrow">KNOWLEDGE SOURCE</span><h2>Knowledge library</h2><p className="subtle">Add documents your chatbot can use to answer visitor questions.</p></div><span className="knowledge-count">{items.length} document{items.length===1?"":"s"}</span></div>
   {error&&<p role="alert" className="config-note">{error}</p>}
   {message&&<p role="status" className="notice">{message}</p>}
-  <input type="file" accept=".txt,.md,.json,.docx,.xlsx" onChange={e=>{const selected=e.target.files?.[0]||null;setError("");if(selected&&selected.size>256*1024){setFile(null);setError("Maximum upload size is 256 KB");e.target.value="";return;}setFile(selected);}}/>
-  <button className="btn" disabled={busy||!file} style={{marginTop:12}} onClick={()=>void upload()}>{busy?"Working…":"Upload and index"}</button>
-  {items.map(item=><div key={item.id} style={{display:"flex",gap:12,justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid #eee"}}>
-   <span style={{overflowWrap:"anywhere"}}>{item.filename} · {item.chunkCount} passages</span>
-   <button className="btn secondary small" disabled={busy} onClick={()=>void remove(item.id)}>Delete</button>
-  </div>)}
-  <h3>Test knowledge retrieval</h3>
-  <p className="subtle">Shows matching excerpts. This is not yet an AI-generated answer.</p>
-  <input value={question} maxLength={500} placeholder="Ask a question about your documents" onChange={e=>setQuestion(e.target.value)}/>
-  <button className="btn secondary small" disabled={busy||question.trim().length<2} onClick={()=>void search()}>Find relevant passages</button>
-  <button className="btn small" style={{marginLeft:8}} disabled={busy||question.trim().length<2} onClick={()=>void askAI()}>Ask AI (uses quota)</button>
-  {answer&&<p role="status" style={{whiteSpace:"pre-wrap",padding:12,background:"#f5f3ff",borderRadius:8}}>{answer}</p>}
-  {passages.map(p=><p key={p.id} style={{whiteSpace:"pre-wrap",fontSize:12,padding:12,background:"#f8f8ff",borderRadius:8}}>{p.text}</p>)}
+  <section className="knowledge-section"><div className="knowledge-section-heading"><span className="step-number">1</span><div><h3>Add knowledge</h3><p className="subtle">TXT, Markdown, JSON, DOCX or XLSX · Up to 256 KB per file · Excel: one sheet, 500 rows × 30 columns</p></div></div>
+   <label className="knowledge-upload"><span className="upload-symbol">↑</span><strong>{file?file.name:"Choose a document to upload"}</strong><small>{file?(file.size/1024).toFixed(1)+" KB selected":"Browse files on your device"}</small><input type="file" accept=".txt,.md,.json,.docx,.xlsx" onChange={e=>{const selected=e.target.files?.[0]||null;setError("");if(selected&&selected.size>256*1024){setFile(null);setError("Maximum upload size is 256 KB");e.target.value="";return;}setFile(selected);}}/></label>
+   <div className="knowledge-actions"><button className="btn" disabled={busy||!file} onClick={()=>void upload()}>{busy?"Working…":"Upload and index"}</button>{file&&<button className="btn secondary" disabled={busy} onClick={()=>setFile(null)}>Clear selection</button>}</div>
+  </section>
+  <section className="knowledge-section"><div className="knowledge-section-heading"><span className="step-number">2</span><div><h3>Uploaded documents</h3><p className="subtle">Manage the information available to this website's chatbot.</p></div></div>
+   {items.length===0?<div className="knowledge-empty">No documents uploaded yet. Add your first file above.</div>:<div className="knowledge-documents">{items.map(item=><div key={item.id} className="knowledge-document"><div><strong>{item.filename}</strong><small>{item.chunkCount} indexed passages</small></div><button className="btn secondary small" disabled={busy} onClick={()=>void remove(item.id)}>Delete</button></div>)}</div>}
+  </section>
+  <section className="knowledge-section"><div className="knowledge-section-heading"><span className="step-number">3</span><div><h3>Test your knowledge</h3><p className="subtle">Search passages without using AI quota, or ask AI for a generated answer.</p></div></div>
+   <label className="knowledge-question">Your question<input value={question} maxLength={500} placeholder="e.g. What services does my business offer?" onChange={e=>setQuestion(e.target.value)}/></label>
+   <div className="knowledge-actions"><button className="btn secondary" disabled={busy||question.trim().length<2} onClick={()=>void search()}>Find relevant passages</button><button className="btn" disabled={busy||question.trim().length<2} onClick={()=>void askAI()}>Ask AI · Uses quota</button></div>
+   {answer&&<div role="status" className="knowledge-result"><strong>AI answer</strong><p style={{whiteSpace:"pre-wrap"}}>{answer}</p></div>}
+   {passages.length>0&&<div className="knowledge-result"><strong>Relevant passages</strong>{passages.map(p=><p key={p.id} style={{whiteSpace:"pre-wrap"}}>{p.text}</p>)}</div>}
+  </section>
  </div>;
 }
