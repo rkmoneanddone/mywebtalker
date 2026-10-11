@@ -98,6 +98,7 @@ export async function processGatewayEvent(provider:Provider,payload:any):Promise
   if(matches.empty)return;
   intent=matches.docs[0];
  }
+ if(!intent)return;
  const value=intent.data()!;
  if(!ids.includes(value.planId))return;
  const paid=provider==="razorpay"?["subscription.activated","subscription.charged"].includes(eventType):["subscription.active","subscription.renewed"].includes(eventType);
