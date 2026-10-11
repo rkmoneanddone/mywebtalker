@@ -1,3 +1,4 @@
+import {reserveAiBudget,recordAiUsage} from "./ai-budget.js";
 import {getFirestore,FieldValue,Timestamp} from "firebase-admin/firestore";
 import {initializeApp,getApps} from "firebase-admin/app";
 import {defineSecret} from "firebase-functions/params";
@@ -55,6 +56,7 @@ export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_AP
  const key=OPENAI_API_KEY.value();
  if(!key)throw new HttpsError("failed-precondition","AI provider is not configured");
  const period=await reserveUsage(uid);
+ try{await reserveAiBudget(uid);}catch{await db.doc(`usage/${uid}/months/${period}`).update({responses:FieldValue.increment(-1)});throw new HttpsError("resource-exhausted","AI daily or monthly budget reached");}
  const context=passages.map(p=>p.text).join("\n---\n").slice(0,9000);
  const controller=new AbortController();
  const timeout=setTimeout(()=>controller.abort(),25000);
@@ -68,7 +70,8 @@ export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_AP
    ]})
   });
   if(!response.ok)throw new Error("AI provider request failed");
-  const json=await response.json() as {choices?:{message?:{content?:string}}[]};
+  const json=await response.json() as {choices?:{message?:{content?:string}}[];usage?:unknown};
+  await recordAiUsage(uid,json.usage).catch(()=>undefined);
   return {answer:json.choices?.[0]?.message?.content||"No answer generated.",sources:passages.map(p=>p.id)};
  }catch{
   await db.doc(`usage/${uid}/months/${period}`).update({responses:FieldValue.increment(-1)}).catch(()=>undefined);
