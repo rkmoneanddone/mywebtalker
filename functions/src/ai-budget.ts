@@ -12,7 +12,7 @@ export const CUSTOMER_DAILY_MICRO_USD=200000; // $0.20
 export const CUSTOMER_MONTHLY_MICRO_USD=3000000; // $3
 export const PLATFORM_DAILY_MICRO_USD=10000000; // $10
 export const PLATFORM_MONTHLY_MICRO_USD=100000000; // $100
-export type BudgetScope="customerDay"|"customerMonth"|"platformDay"|"platformMonth";
+/** Configured GPT-4.1-mini reference prices in micro-USD per million tokens.\n * Review these values against the current provider price sheet before launch. */\nexport const INPUT_MICRO_USD_PER_MILLION=400000;\nexport const OUTPUT_MICRO_USD_PER_MILLION=1600000;\nexport function estimatedProviderMicroUsd(input:number,output:number):number{\n if(!Number.isSafeInteger(input)||!Number.isSafeInteger(output)||input<0||output<0)throw Error("Invalid token usage");\n return Math.ceil(input*INPUT_MICRO_USD_PER_MILLION/1000000+output*OUTPUT_MICRO_USD_PER_MILLION/1000000);\n}
 export function budgetAllowed(current:number,limit:number,cost=COST_PER_REQUEST_MICRO_USD):boolean{
  return Number.isSafeInteger(current)&&current>=0&&Number.isSafeInteger(limit)&&limit>0&&current+cost<=limit;
 }
@@ -43,6 +43,6 @@ export async function recordAiUsage(uid:string,usage:unknown):Promise<void>{
  await db.doc(`aiBudgets/${uid}/months/${month}`).set({
   inputTokens:FieldValue.increment(input as number),
   outputTokens:FieldValue.increment(output as number),
-  successfulRequests:FieldValue.increment(1)
+  estimatedProviderMicroUsd:FieldValue.increment(estimatedProviderMicroUsd(input as number,output as number)),\n  successfulRequests:FieldValue.increment(1)
  },{merge:true});
 }
