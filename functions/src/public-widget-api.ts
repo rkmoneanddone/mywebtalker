@@ -81,9 +81,12 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
    for(const chunk of chunks.docs)passages.push({id:`${document.id}/${chunk.id}`,text:String(chunk.get("text")||"").slice(0,1800)});
   }
   const ranked=rankPassages(question,passages,5);
-  if(!ranked.length){res.status(200).json({answer:"I could not find that information in the website knowledge.",ready:true});return;}
+  if(!ranked.length){
+   await usageRef.update({responses:FieldValue.increment(-1)});
+   res.status(200).json({answer:"I could not find that information in the website knowledge.",ready:true});return;
+  }
   const key=OPENAI_API_KEY.value();
-  if(!key){res.status(503).json({error:"Assistant is not configured"});return;}
+  if(!key){await usageRef.update({responses:FieldValue.increment(-1)});res.status(503).json({error:"Assistant is not configured"});return;}
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),25000);
   try{
