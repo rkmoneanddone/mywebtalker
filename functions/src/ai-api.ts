@@ -58,13 +58,13 @@ export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_AP
  const website=await db.doc(`customers/${uid}/websites/${websiteId}`).get();
  if(!website.exists)throw new HttpsError("not-found","Website not registered");
  const indexedFaq=await lookupFaq(uid,websiteId,question);
- if(indexedFaq){const period=await reserveUsage(uid);await db.doc(`usage/${uid}/months/${period}`).update({responses:FieldValue.increment(-1)});return {answer:indexedFaq.answer,sources:[indexedFaq.sourceId],answerMode:"direct"};}
+ if(indexedFaq){await reserveUsage(uid);return {answer:indexedFaq.answer,sources:[indexedFaq.sourceId],answerMode:"direct"};}
  const passages=await retrieve(uid,websiteId,question);
- if(passages.length===0)return {answer:"I couldn't find that information in the uploaded knowledge.",sources:[]};
+ if(passages.length===0){await reserveUsage(uid);return {answer:"I couldn't find that information in the uploaded knowledge.",sources:[]};}
  const direct=findDirectFaqAnswer(question,passages);
- if(direct)return {answer:direct.answer,sources:[direct.sourceId],answerMode:"direct"};
+ if(direct){await reserveUsage(uid);return {answer:direct.answer,sources:[direct.sourceId],answerMode:"direct"};}
  const extractive=extractPassageAnswer(question,passages);
- if(extractive)return {answer:extractive.answer,sources:[extractive.sourceId],answerMode:"direct"};
+ if(extractive){await reserveUsage(uid);return {answer:extractive.answer,sources:[extractive.sourceId],answerMode:"direct"};}
  const key=OPENAI_API_KEY.value();
  if(!key)throw new HttpsError("failed-precondition","AI provider is not configured");
  const period=await reserveUsage(uid);
