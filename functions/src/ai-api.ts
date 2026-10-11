@@ -1,3 +1,4 @@
+import {extractPassageAnswer} from "./passage-answer.js";
 import {lookupFaq} from "./faq-store.js";
 import {findDirectFaqAnswer} from "./direct-answer.js";
 import {reserveAiBudget,recordAiUsage} from "./ai-budget.js";
@@ -59,6 +60,8 @@ export const askPrivateKnowledge=onCall({region:"asia-south1",secrets:[OPENAI_AP
  if(passages.length===0)return {answer:"I couldn't find that information in the uploaded knowledge.",sources:[]};
  const direct=findDirectFaqAnswer(question,passages);
  if(direct)return {answer:direct.answer,sources:[direct.sourceId],answerMode:"direct"};
+ const extractive=extractPassageAnswer(question,passages);
+ if(extractive)return {answer:extractive.answer,sources:[extractive.sourceId],answerMode:"direct"};
  const key=OPENAI_API_KEY.value();
  if(!key)throw new HttpsError("failed-precondition","AI provider is not configured");
  const period=await reserveUsage(uid);
