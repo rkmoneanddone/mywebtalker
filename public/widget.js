@@ -26,7 +26,7 @@
  const leadButton=document.createElement("button");leadButton.type="submit";leadButton.textContent="Start chatting";
  const leadError=document.createElement("div");leadError.style.color="#a00";leadError.setAttribute("role","alert");
  leadForm.append(leadName,leadEmail,leadMobile,leadButton,leadError);
- let leadSaved=false;
+ let leadSaved=false,visitorToken="";
  leadForm.addEventListener("submit",async event=>{
   event.preventDefault();if(leadSaved||leadButton.disabled)return;
   const name=leadName.value.trim(),email=leadEmail.value.trim(),mobile=leadMobile.value.trim();
@@ -36,6 +36,9 @@
    const leadUrl=new URL(endpoint);leadUrl.pathname=leadUrl.pathname.slice(0,leadUrl.pathname.lastIndexOf("/")+1)+"captureVisitorLead";leadUrl.searchParams.set("installationId",installationId);
    const response=await fetch(leadUrl.toString(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({installationId,name,email,mobile}),credentials:"omit"});
    if(!response.ok)throw Error("Unable to save visitor details");
+   const saved=await response.json();
+   if(typeof saved.visitorToken!=="string")throw Error("Missing visitor session");
+   visitorToken=saved.visitorToken;
    leadSaved=true;leadForm.remove();form.style.display="flex";input.focus();
   }catch{leadError.textContent="Could not start chat. Please retry.";}
   finally{leadButton.disabled=false;}
@@ -45,7 +48,7 @@
  const launch=document.createElement("button");launch.className="launch";launch.type="button";launch.textContent="Chat with us";launch.setAttribute("aria-expanded","false");
  function addMessage(value,user){const msg=document.createElement("div");msg.className="msg"+(user?" user":"");msg.textContent=value;messages.append(msg);messages.scrollTop=messages.scrollHeight;}
  addMessage("Hello! How can I help you?",false);
- launch.addEventListener("click",()=>{const open=panel.classList.toggle("open");launch.setAttribute("aria-expanded",String(open));launch.textContent=open?"Close chat":"Chat with us";if(open)input.focus();});
+ launch.addEventListener("click",()=>{const open=panel.classList.toggle("open");launch.setAttribute("aria-expanded",String(open));launch.textContent=open?"Close chat":"Chat with us";if(open)(leadSaved?input:leadName).focus();});
  form.addEventListener("submit",async event=>{
   event.preventDefault();const question=input.value.trim();if(question.length<2||send.disabled)return;
   input.value="";addMessage(question,true);send.disabled=true;input.disabled=true;
@@ -53,7 +56,7 @@
    const url=new URL(endpoint);url.searchParams.set("installationId",installationId);
    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);
    try{
-    const response=await fetch(url.toString(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({installationId,question}),signal:controller.signal,credentials:"omit"});
+    const response=await fetch(url.toString(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({installationId,question,visitorToken}),signal:controller.signal,credentials:"omit"});
     const data=await response.json();
     addMessage(response.ok&&typeof data.answer==="string"?data.answer:"Assistant unavailable. Please try again later.",false);
    }finally{clearTimeout(timer);}
