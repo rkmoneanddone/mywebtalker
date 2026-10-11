@@ -16,9 +16,9 @@ export interface AccessDecision {
  plan:Plan; remainingResponses:number;
 }
 export const DEFAULT_PLANS:Record<PlanId,Plan>={
- self:{id:"self",name:"Self Hosted",inrMinor:49900,usdMinor:500,responsesPerMonth:300,websites:1,knowledgePages:100,managed:false,enabled:true},
- managed:{id:"managed",name:"Managed",inrMinor:89900,usdMinor:1100,responsesPerMonth:500,websites:1,knowledgePages:250,managed:true,enabled:true},
- pro:{id:"pro",name:"Managed Pro",inrMinor:219900,usdMinor:2200,responsesPerMonth:2000,websites:3,knowledgePages:1000,managed:true,enabled:true}
+ self:{id:"self",name:"Self Hosted",inrMinor:49900,usdMinor:900,responsesPerMonth:300,websites:1,knowledgePages:100,managed:false,enabled:true},
+ managed:{id:"managed",name:"Managed",inrMinor:89900,usdMinor:1400,responsesPerMonth:500,websites:1,knowledgePages:250,managed:true,enabled:true},
+ pro:{id:"pro",name:"Managed Pro",inrMinor:219900,usdMinor:2400,responsesPerMonth:2000,websites:3,knowledgePages:1000,managed:true,enabled:true}
 };
 /** Return a pure, auditable entitlement decision; payment data must come from trusted server state. */
 export function evaluateAccess(billing:BillingState,plan:Plan,nowMs:number,used:number):AccessDecision{
