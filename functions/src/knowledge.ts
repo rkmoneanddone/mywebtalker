@@ -82,3 +82,9 @@ export function rankPassages(query:string,documents:{id:string;text:string}[],li
   return {...doc,score};
  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,limit);
 }
+
+/** Lightweight indexed keyword retrieval. Terms are generated once at upload, not on each question. */
+const STOP_WORDS=new Set(["what","when","where","which","with","from","that","this","there","their","have","does","your","about","would","could","should","please","tell","more","into","than","then","they","them","and","the","for","are","you","how","can","who","was","were","our","has","had","not","but","all","any"]);
+export function searchTerms(text:string,limit=80):string[]{
+ return [...new Set((text.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu)||[]).filter(t=>!STOP_WORDS.has(t)).map(t=>t.slice(0,48)))].slice(0,limit);
+}
