@@ -31,7 +31,7 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:15,
   if(!created){res.status(403).json({error:"Subscription unavailable"});return;}
   const subscription=(await db.doc(`privateBilling/${uid}`).get()).data();
   const planId:PlanId=subscription?.planId==="self"||subscription?.planId==="pro"?subscription.planId:"managed";
-  const billing:BillingState={status:subscription?.status==="active"?"active":subscription?.status==="trial"?"trial":"expired",planId,trialEndMs:created.toMillis()+7*86400000,periodEndMs:subscription?.periodEnd?.toMillis?.(),brandingEnabled:false};
+  const billing:BillingState={status:subscription?.status==="active"?"active":subscription?.status==="expired"?"expired":subscription?.status==="past_due"?"past_due":subscription?.status==="cancelled"?"cancelled":"trial",planId,trialEndMs:created.toMillis()+7*86400000,periodEndMs:subscription?.periodEnd?.toMillis?.(),brandingEnabled:false};
   const period=new Date().toISOString().slice(0,7);
   const usageRef=db.doc(`usage/${uid}/months/${period}`);
   const ip=String(req.ip||"unknown");
