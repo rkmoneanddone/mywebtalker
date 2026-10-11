@@ -16,8 +16,8 @@ function requireUid(auth:{uid:string;token:{email_verified?:boolean}}|undefined)
  return auth.uid;
 }
 /** Restrict admin changes to a Firebase custom claim granted outside the browser. */
-function requireAdmin(auth:{token:{admin?:boolean}}|undefined):void{
- if(auth?.token.admin!==true)throw new HttpsError("permission-denied","Admin access required");
+function requireAdmin(auth:{token:Record<string,unknown>}|undefined):void{
+ if(auth?.token["admin"]!==true)throw new HttpsError("permission-denied","Admin access required");
 }
 /** Validate a plan document from trusted Firestore config before using its quotas. */
 function asPlan(value:unknown,id:PlanId):Plan{
