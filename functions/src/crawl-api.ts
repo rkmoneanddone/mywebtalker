@@ -12,7 +12,7 @@ if(!getApps().length)initializeApp();
 const db=getFirestore();
 function publicAddress(address:string):boolean{
  if(isIP(address)!==4)return false; // IPv4 only: fail closed on IPv6
- const [a,b,c]=address.split(".").map(Number);
+ const [a=0,b=0,c=0]=address.split(".").map(Number);
  return !(a===0||a===10||a===127||a>=224||a===169&&b===254||a===172&&b>=16&&b<=31||a===192&&b===168||a===100&&b>=64&&b<=127||a===192&&b===0||a===198&&b>=18&&b<=19);
 }
 async function fetchHomepage(host:string):Promise<string>{
