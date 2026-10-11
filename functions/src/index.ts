@@ -100,7 +100,7 @@ export {askPrivateKnowledge} from "./ai-api.js";
 export {beginWebsiteVerification,confirmWebsiteVerification} from "./website-verification.js";
 
 /** Issue widget installations only after verified website ownership. */
-export {createWidgetInstallation} from "./widget-installation.js";
+export {createWidgetInstallation,setWidgetPublication} from "./widget-installation.js";
 
 /** Fail-closed visitor endpoint; public AI generation is not enabled. */
 export {publicWidgetChat} from "./public-widget-api.js";
