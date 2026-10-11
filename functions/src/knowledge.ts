@@ -32,6 +32,7 @@ async function extractExcel(bytes:Buffer):Promise<string>{
  await workbook.xlsx.load(bytes as never);
  if(workbook.worksheets.length!==1)throw Error("Excel must contain exactly one worksheet/tab");
  const sheet=workbook.worksheets[0];
+ if(!sheet)throw Error("Excel must contain exactly one worksheet/tab");
  if(sheet.rowCount>MAX_EXCEL_ROWS||sheet.columnCount>MAX_EXCEL_COLUMNS)
   throw Error("Excel limit: 500 rows and 30 columns maximum");
  const lines:string[]=[`Worksheet: ${sheet.name}`];
