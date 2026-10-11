@@ -133,14 +133,14 @@ export default function Workspace({user}:{user:User}){
   <nav aria-label="Workspace sections" style={{display:"flex",gap:10,flexWrap:"wrap",margin:"20px 0"}}>{([["websites","My Websites"],["knowledge","Knowledge Library"],["appearance","Appearance"]] as const).map(([id,label])=><button key={id} type="button" aria-current={activeTab===id?"page":undefined} className={activeTab===id?"btn":"btn secondary"} onClick={()=>{setActiveTab(id);setError("");setNotice("");}}>{label}</button>)}</nav>
   {loading?<div className="dash-card">Loading your workspace…</div>:<>
    {activeTab==="appearance"&&<div className="dash-grid">
-    <div className="dash-card"><h2>Appearance</h2><p className="subtle">Changes are previewed immediately. Save to persist them.</p>
+    <div className="dash-card appearance-settings"><span className="setup-eyebrow">CHATBOT BRANDING</span><h2>Appearance</h2><p className="subtle">Make your chatbot match your website. Preview changes before saving.</p>
      <label>Company name<input value={settings.companyName} maxLength={80} onChange={e=>setSettings(s=>({...s,companyName:e.target.value}))}/></label>
      <label>Chatbot name<input value={settings.botName} maxLength={80} onChange={e=>setSettings(s=>({...s,botName:e.target.value}))}/></label>
-     <label>Chat colour<input type="color" value={settings.color} onChange={e=>setSettings(s=>({...s,color:e.target.value}))}/></label>
-     <label>Position<select value={settings.position} onChange={e=>setSettings(s=>({...s,position:e.target.value as Position}))}>{positions.map(p=><option key={p}>{p}</option>)}</select></label>
-     <button className="btn" disabled={saving} onClick={()=>void save()}>{saving?"Saving…":"Save appearance"}</button>
+     <label>Chat colour<div className="appearance-color-row"><input aria-label="Chat colour" type="color" value={settings.color} onChange={e=>setSettings(s=>({...s,color:e.target.value}))}/><code>{settings.color.toUpperCase()}</code></div></label>
+     <fieldset className="appearance-position"><legend>Chat position</legend><div className="position-choices">{positions.map(p=><button type="button" key={p} aria-pressed={settings.position===p} className={settings.position===p?"selected":""} onClick={()=>setSettings(s=>({...s,position:p}))}>{p.replaceAll("-"," ")}</button>)}</div></fieldset>
+     <div className="appearance-save"><button className="btn" disabled={saving} onClick={()=>void save()}>{saving?"Saving…":"Save appearance"}</button></div>
     </div>
-    <div className="dash-card"><h2>Live preview</h2><div className="preview"><div className="preview-chat" style={{borderColor:settings.color}}>
+    <div className="dash-card appearance-preview"><span className="setup-eyebrow">INSTANT PREVIEW</span><h2>Live preview</h2><p className="subtle">A sample of how visitors will see your chatbot.</p><div className="preview"><div className="preview-chat" style={{borderColor:settings.color}}>
      <div className="preview-header" style={{background:settings.color}}><Bot size={20}/><div><strong>{settings.botName}</strong><small>{settings.companyName}</small></div><button onClick={()=>setOpen(!open)}>{open?"−":"+"}</button></div>
      {open&&<><div className="preview-message">Hello! 👋 How can I help you today?</div><div className="preview-input">Type your message...</div><div className="powered">Powered by <b>mywebtalker</b></div></>}
     </div><button aria-label="Toggle chat preview" className={"preview-launch "+settings.position} style={{background:settings.color,border:0}} onClick={()=>setOpen(!open)}><MessageCircle/></button></div></div>
@@ -171,7 +171,7 @@ export default function Workspace({user}:{user:User}){
    </div>)}
    </>}
    {activeTab==="knowledge"&&<>{websites.length===0&&<div className="dash-card">Add a website in My Websites before uploading knowledge.</div>}
-   {websites.length>0&&<div className="dash-card" style={{marginTop:20}}><h2>Choose knowledge website</h2><select value={selectedWebsite||websites[0]?.id||""} onChange={e=>setSelectedWebsite(e.target.value)}>{websites.map(w=><option key={w.id} value={w.id}>{w.url}</option>)}</select></div>}
+   {websites.length>0&&<div className="knowledge-site-bar"><label htmlFor="knowledge-site">Website knowledge</label><select id="knowledge-site" value={selectedWebsite||websites[0]?.id||""} onChange={e=>setSelectedWebsite(e.target.value)}>{websites.map(w=><option key={w.id} value={w.id}>{new URL(w.url).hostname} · {w.status==="verified"?"Verified":"Pending verification"}</option>)}</select></div>}
    {websites.length>0&&<><p className="subtle">Knowledge can be prepared before verification. Publishing the chatbot requires verified website ownership.</p><KnowledgePanel key={selectedWebsite||websites[0].id} websiteId={selectedWebsite||websites[0].id}/></>}
    </>}
   </>}
