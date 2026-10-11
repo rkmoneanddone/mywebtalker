@@ -87,6 +87,7 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
   }
   const key=OPENAI_API_KEY.value();
   if(!key){await usageRef.update({responses:FieldValue.increment(-1)});res.status(503).json({error:"Assistant is not configured"});return;}
+  const context=ranked.map(p=>p.text).join("\n---\n").slice(0,9000);
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),25000);
   try{
@@ -103,7 +104,7 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
    const answer=data.choices?.[0]?.message?.content;
    if(typeof answer!=="string"||!answer.trim())throw Error("provider");
    res.status(200).json({answer:answer.slice(0,2500),ready:true});
-  }catch{res.status(503).json({error:"Assistant temporarily unavailable"});}
+  }catch{await usageRef.update({responses:FieldValue.increment(-1)}).catch(()=>undefined);res.status(503).json({error:"Assistant temporarily unavailable"});}
   finally{clearTimeout(timer);}
  }catch(error){
   if(error instanceof Error&&error.message==="rate"){res.status(429).json({error:"Too many requests; retry shortly"});return;}
