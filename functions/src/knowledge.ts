@@ -1,5 +1,6 @@
 import mammoth from "mammoth";
 import ExcelJS from "exceljs";
+import {validateOfficeArchive} from "./office-archive.js";
 
 export type KnowledgeFileType="txt"|"md"|"json"|"docx"|"xlsx";
 export type ExtractedKnowledge={filename:string;type:KnowledgeFileType;text:string;chunks:string[];characters:number};
@@ -57,6 +58,7 @@ async function extractExcel(bytes:Buffer):Promise<string>{
 export async function extractKnowledge(filename:string,bytes:Buffer):Promise<ExtractedKnowledge>{
  if(!filename||filename.length>180||!Buffer.isBuffer(bytes)||bytes.length===0||bytes.length>MAX_KNOWLEDGE_BYTES)throw Error("Invalid file or file too large (256 KB maximum)");
  const type=detectType(filename);
+ if(type==="docx"||type==="xlsx")validateOfficeArchive(bytes);
  let text:string;
  if(type==="docx"){
   const result=await mammoth.extractRawText({buffer:bytes});
