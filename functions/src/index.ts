@@ -95,3 +95,6 @@ export {uploadKnowledge,listKnowledge,deleteKnowledge,searchKnowledge} from "./k
 
 /** Expose authenticated, grounded AI preview with backend quota enforcement. */
 export {askPrivateKnowledge} from "./ai-api.js";
+
+/** Verify website ownership using a customer-controlled DNS TXT record. */
+export {beginWebsiteVerification,confirmWebsiteVerification} from "./website-verification.js";
