@@ -1,3 +1,4 @@
+import {getConfiguredPlan} from "./plan-config.js";
 import {extractPassageAnswer} from "./passage-answer.js";
 import {lookupFaq} from "./faq-store.js";
 import {findDirectFaqAnswer} from "./direct-answer.js";
@@ -68,9 +69,10 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
   const bucket=minuteBucket(Date.now());
   const limitRef=db.doc(`widgetRateLimits/${installationId}/windows/${bucket}_${ipHash}`);
   const siteLimitRef=db.doc(`widgetRateLimits/${installationId}/windows/${bucket}_site`);
+  const configuredPlan=await getConfiguredPlan(planId);
   await db.runTransaction(async tx=>{
    const [usage,rate,siteRate]=await Promise.all([tx.get(usageRef),tx.get(limitRef),tx.get(siteLimitRef)]);
-   const decision=evaluateAccess(billing,DEFAULT_PLANS[planId],Date.now(),Number(usage.get("responses")||0));
+   const decision=evaluateAccess(billing,configuredPlan,Date.now(),Number(usage.get("responses")||0));
    if(!decision.allowed)throw Error("quota");
    if(Number(rate.get("count")||0)>=5||Number(siteRate.get("count")||0)>=60)throw Error("rate");
    tx.set(limitRef,{count:FieldValue.increment(1),expiresAt:Timestamp.fromMillis(Date.now()+3600000)},{merge:true});
