@@ -104,3 +104,6 @@ export {createWidgetInstallation,setWidgetPublication} from "./widget-installati
 
 /** Fail-closed visitor endpoint; public AI generation is not enabled. */
 export {publicWidgetChat} from "./public-widget-api.js";
+
+/** Ingest only the verified homepage; no uploaded file or raw HTML is retained. */
+export {crawlWebsiteHomepage} from "./crawl-api.js";
