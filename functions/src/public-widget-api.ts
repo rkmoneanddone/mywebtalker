@@ -84,18 +84,17 @@ export const publicWidgetChat=onRequest({region:"asia-south1",timeoutSeconds:45,
    tx.set(usageRef,{responses:FieldValue.increment(1),period,updatedAt:FieldValue.serverTimestamp()},{merge:true});
   });
   const indexedFaq=await lookupFaq(uid,websiteId,question);
-  if(indexedFaq){await usageRef.update({responses:FieldValue.increment(-1)});res.status(200).json({answer:indexedFaq.answer,ready:true,answerMode:"direct"});return;}
+  if(indexedFaq){res.status(200).json({answer:indexedFaq.answer,ready:true,answerMode:"direct"});return;}
   // Retrieval remains bounded; production load testing must measure Firestore read cost.
   const terms=searchTerms(question,10);
   const matches=terms.length?await db.collection(`customers/${uid}/websites/${websiteId}/knowledgeIndex`).where("terms","array-contains-any",terms).limit(25).get():null;
   const passages=(matches?.docs||[]).map(doc=>({id:doc.id,text:String(doc.get("text")||"").slice(0,1800)}));
   const ranked=rankPassages(question,passages,5);
   const direct=findDirectFaqAnswer(question,ranked);
-  if(direct){await usageRef.update({responses:FieldValue.increment(-1)}).catch(()=>undefined);res.status(200).json({answer:direct.answer,ready:true,answerMode:"direct"});return;}
+  if(direct){res.status(200).json({answer:direct.answer,ready:true,answerMode:"direct"});return;}
   const extractive=extractPassageAnswer(question,ranked);
-  if(extractive){await usageRef.update({responses:FieldValue.increment(-1)});res.status(200).json({answer:extractive.answer,ready:true,answerMode:"direct"});return;}
+  if(extractive){res.status(200).json({answer:extractive.answer,ready:true,answerMode:"direct"});return;}
   if(!ranked.length){
-   await usageRef.update({responses:FieldValue.increment(-1)});
    res.status(200).json({answer:"I could not find that information in the website knowledge.",ready:true});return;
   }
   const key=OPENAI_API_KEY.value();
