@@ -1,5 +1,6 @@
 import {initializeApp,getApps,getApp} from "firebase/app";
 import {getAuth} from "firebase/auth";
+import {getFirestore} from "firebase/firestore";
 
 /** Firebase client identifiers are public configuration, never backend secrets. */
 const config={
@@ -14,5 +15,6 @@ const config={
 /** Reuse an existing app instance to support hot module reloads. */
 export const configured=Boolean(config.apiKey&&config.projectId&&config.appId);
 export const app=configured?(getApps().length?getApp():initializeApp(config)):null;
-/** Expose Firebase Auth only; privileged database operations belong on the server. */
+/** Authentication and restricted tenant database clients. */
 export const auth=app?getAuth(app):null;
+export const db=app?getFirestore(app):null;
